@@ -44,7 +44,7 @@ export default function Step2HomeDetails() {
   };
 
   return (
-    <Layout progress={50} heroSrc="/hero-step2.jpg">
+    <Layout progress={50} heroSrc={`${import.meta.env.BASE_URL}hero-step2.jpg`}>
       <div className="flex flex-col gap-6 flex-1">
         <StepHeader step={2} totalSteps={4} title="Tell us about your home" />
 

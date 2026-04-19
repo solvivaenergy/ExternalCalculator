@@ -21,7 +21,7 @@ export default function ProposalSent() {
     <div className="relative min-h-dvh">
       {/* Background hero image */}
       <img
-        src="/hero-proposal.jpg"
+        src={`${import.meta.env.BASE_URL}hero-proposal.jpg`}
         alt=""
         className="absolute inset-0 w-full h-full object-cover"
       />
@@ -32,7 +32,11 @@ export default function ProposalSent() {
       <div className="relative z-10 min-h-dvh flex flex-col">
         {/* Logo */}
         <div className="flex justify-center pt-8">
-          <img src="/logo-white.svg" alt="Solviva" className="h-12 w-auto" />
+          <img
+            src={`${import.meta.env.BASE_URL}logo-white.svg`}
+            alt="Solviva"
+            className="h-12 w-auto"
+          />
         </div>
 
         <div className="flex-1 flex items-center justify-center px-8 py-8">

@@ -212,7 +212,7 @@ export default function Step3Appliances() {
   };
 
   return (
-    <Layout progress={75} heroSrc="/hero-step3.jpg">
+    <Layout progress={75} heroSrc={`${import.meta.env.BASE_URL}hero-step3.jpg`}>
       <div className="flex flex-col gap-6 flex-1">
         {/* Mobile title */}
         <div className="lg:hidden">

@@ -27,7 +27,10 @@ export default function Step4Contact() {
   };
 
   return (
-    <Layout progress={100} heroSrc="/hero-step4.jpg">
+    <Layout
+      progress={100}
+      heroSrc={`${import.meta.env.BASE_URL}hero-step4.jpg`}
+    >
       <div className="flex flex-col gap-6 flex-1">
         <StepHeader
           step={4}

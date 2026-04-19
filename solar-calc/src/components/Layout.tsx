@@ -32,7 +32,11 @@ export default function Layout({
       <div className="min-h-dvh bg-bg-main">
         <div className="mx-auto max-w-[1440px]">
           <div className="hidden lg:flex lg:justify-start lg:pt-16 lg:px-16">
-            <img src="/logo.webp" alt="Solviva" className="h-12 w-auto" />
+            <img
+              src={`${import.meta.env.BASE_URL}logo.webp`}
+              alt="Solviva"
+              className="h-12 w-auto"
+            />
           </div>
           <div className="px-8 pt-6 pb-12 lg:max-w-[960px] lg:mx-auto lg:px-0 lg:pt-8">
             {children}
@@ -61,7 +65,11 @@ export default function Layout({
         <div
           className={`flex justify-center lg:justify-start pt-6 pb-2 lg:pt-20 lg:pb-0 lg:px-16${hideMobileLogo ? " hidden lg:flex" : ""}`}
         >
-          <img src="/logo.webp" alt="Solviva" className="h-12 w-auto" />
+          <img
+            src={`${import.meta.env.BASE_URL}logo.webp`}
+            alt="Solviva"
+            className="h-12 w-auto"
+          />
         </div>
 
         {/* Content area */}

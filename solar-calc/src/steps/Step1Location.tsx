@@ -23,7 +23,7 @@ export default function Step1Location() {
   };
 
   return (
-    <Layout progress={25} heroSrc="/hero-step1.jpg">
+    <Layout progress={25} heroSrc={`${import.meta.env.BASE_URL}hero-step1.jpg`}>
       <div className="flex flex-col gap-6 flex-1 justify-center">
         <StepHeader
           step={1}
