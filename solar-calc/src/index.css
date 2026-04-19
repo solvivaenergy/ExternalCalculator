@@ -1,0 +1,44 @@
+﻿@import "tailwindcss";
+
+@theme {
+  --font-sans: "DM Sans", sans-serif;
+
+  /* Brand */
+  --color-brand-lime: #D2FF1E;
+  --color-brand-dark-green: #1F522B;
+  --color-brand-dark-green-2: #50890A;
+  --color-brand-light-green-2: #8BE114;
+  --color-brand-blue: #006AC6;
+
+  /* Neutrals */
+  --color-neutral-800: #1D2939;
+  --color-neutral-700: #344054;
+  --color-neutral-600: #475467;
+  --color-neutral-500: #667085;
+  --color-neutral-400: #98A2B3;
+  --color-neutral-300: #D0D5DD;
+  --color-neutral-200: #E4E7EC;
+  --color-neutral-100: #F2F4F7;
+  --color-neutral-white: #FCFCFC;
+
+  /* Semantic greens */
+  --color-green-50: #F0FDF4;
+  --color-green-700: #15803D;
+
+  /* Background */
+  --color-bg-main: #FAF9F4;
+
+  /* Progress bar */
+  --color-progress-track: #D9E1B9;
+  --color-progress-fill: #D2FF1E;
+
+  /* Badge */
+  --color-badge-dark: #43720A;
+
+  /* Shadows */
+  --shadow-xs: 0 1px 2px 0 rgba(16, 24, 40, 0.05);
+}
+
+body {
+  font-optical-sizing: auto;
+}
