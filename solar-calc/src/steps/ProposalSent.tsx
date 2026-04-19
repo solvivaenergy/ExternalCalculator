@@ -90,7 +90,7 @@ export default function ProposalSent() {
 
               {/* Visit website */}
               <a
-                href="https://solvivaenergy.com"
+                href="https://www.solvivaenergy.com"
                 className="w-full inline-flex items-center justify-center rounded-lg bg-brand-dark-green-2 px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
               >
                 Visit solvivaenergy.com
