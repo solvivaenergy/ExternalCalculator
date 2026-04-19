@@ -44,14 +44,14 @@ function TimePicker({
   onMinute: (m: number) => void;
   onAmPm: (a: "AM" | "PM") => void;
 }) {
-  const selCls =
-    "h-9 px-2 border border-neutral-300 rounded-lg bg-white text-sm outline-none shadow-xs";
+  const selBase =
+    "h-9 px-1 border border-neutral-300 rounded-lg bg-white text-sm outline-none shadow-xs flex-1 min-w-0";
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 min-w-0 overflow-hidden">
       <span className="text-xs font-medium text-neutral-500">{label}</span>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 min-w-0">
         <select
-          className={selCls}
+          className={selBase}
           value={hour}
           onChange={(e) => onHour(+e.target.value)}
         >
@@ -61,9 +61,9 @@ function TimePicker({
             </option>
           ))}
         </select>
-        <span className="text-neutral-400">:</span>
+        <span className="text-neutral-400 shrink-0">:</span>
         <select
-          className={selCls}
+          className={selBase}
           value={minute}
           onChange={(e) => onMinute(+e.target.value)}
         >
@@ -74,7 +74,7 @@ function TimePicker({
           ))}
         </select>
         <select
-          className={selCls}
+          className={selBase}
           value={ampm}
           onChange={(e) => onAmPm(e.target.value as "AM" | "PM")}
         >
@@ -102,7 +102,7 @@ function DeviceCard({
     onChange({ ...device, ...patch });
 
   return (
-    <div className="border border-neutral-200 rounded-lg bg-white p-4 shadow-xs space-y-3">
+    <div className="border border-neutral-200 rounded-lg bg-white p-4 shadow-xs space-y-3 overflow-hidden">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-neutral-700">
           Appliance {index + 1}
@@ -149,25 +149,29 @@ function DeviceCard({
       </div>
 
       {/* Time pickers */}
-      <div className="flex gap-4">
-        <TimePicker
-          label="ON Time"
-          hour={device.onTimeHour}
-          minute={device.onTimeMinute}
-          ampm={device.onTimeAmPm}
-          onHour={(h) => upd({ onTimeHour: h })}
-          onMinute={(m) => upd({ onTimeMinute: m })}
-          onAmPm={(a) => upd({ onTimeAmPm: a })}
-        />
-        <TimePicker
-          label="OFF Time"
-          hour={device.offTimeHour}
-          minute={device.offTimeMinute}
-          ampm={device.offTimeAmPm}
-          onHour={(h) => upd({ offTimeHour: h })}
-          onMinute={(m) => upd({ offTimeMinute: m })}
-          onAmPm={(a) => upd({ offTimeAmPm: a })}
-        />
+      <div className="flex flex-wrap gap-2">
+        <div className="flex-1 min-w-[140px]">
+          <TimePicker
+            label="ON Time"
+            hour={device.onTimeHour}
+            minute={device.onTimeMinute}
+            ampm={device.onTimeAmPm}
+            onHour={(h) => upd({ onTimeHour: h })}
+            onMinute={(m) => upd({ onTimeMinute: m })}
+            onAmPm={(a) => upd({ onTimeAmPm: a })}
+          />
+        </div>
+        <div className="flex-1 min-w-[140px]">
+          <TimePicker
+            label="OFF Time"
+            hour={device.offTimeHour}
+            minute={device.offTimeMinute}
+            ampm={device.offTimeAmPm}
+            onHour={(h) => upd({ offTimeHour: h })}
+            onMinute={(m) => upd({ offTimeMinute: m })}
+            onAmPm={(a) => upd({ offTimeAmPm: a })}
+          />
+        </div>
       </div>
 
       {/* Days per week */}
