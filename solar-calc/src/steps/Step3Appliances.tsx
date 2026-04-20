@@ -1,4 +1,5 @@
-﻿import { Plus, Trash2 } from "lucide-react";
+﻿import { useState, useRef, useEffect, useCallback } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { useWizard } from "../context/WizardContext";
 import { DEVICES, type DeviceEntry, type DeviceName } from "../calculator";
 import Layout from "../components/Layout";
@@ -26,8 +27,86 @@ function defaultDevice(): DeviceEntry {
   };
 }
 
-/* ── Time picker row ── */
-function TimePicker({
+/* ── Wheel column for rolling time picker ── */
+const WHEEL_ITEM_H = 36;
+const WHEEL_VISIBLE = 3;
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const MINUTES = ["00", "15", "30", "45"];
+const PERIODS = ["AM", "PM"];
+
+function WheelColumn({
+  items,
+  selectedIndex,
+  onSelect,
+}: {
+  items: string[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const scrolling = useRef(false);
+  const timer = useRef(0);
+
+  useEffect(() => {
+    if (ref.current && !scrolling.current) {
+      ref.current.scrollTop = selectedIndex * WHEEL_ITEM_H;
+    }
+  }, [selectedIndex]);
+
+  const handleScroll = useCallback(() => {
+    scrolling.current = true;
+    clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      const el = ref.current;
+      if (!el) return;
+      const idx = Math.round(el.scrollTop / WHEEL_ITEM_H);
+      const clamped = Math.max(0, Math.min(items.length - 1, idx));
+      if (clamped !== selectedIndex) onSelect(clamped);
+      el.scrollTo({ top: clamped * WHEEL_ITEM_H, behavior: "smooth" });
+      scrolling.current = false;
+    }, 100);
+  }, [items.length, selectedIndex, onSelect]);
+
+  const padH = Math.floor(WHEEL_VISIBLE / 2) * WHEEL_ITEM_H;
+
+  return (
+    <div
+      className="relative overflow-hidden flex-1 min-w-0"
+      style={{ height: WHEEL_VISIBLE * WHEEL_ITEM_H }}
+    >
+      <div
+        className="absolute inset-x-0 border-y border-brand-dark-green-2/30 pointer-events-none z-10"
+        style={{ top: padH, height: WHEEL_ITEM_H }}
+      />
+      <div className="absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 bottom-0 h-9 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
+      <div
+        ref={ref}
+        className="h-full overflow-y-auto scrollbar-hide"
+        style={{
+          scrollSnapType: "y mandatory",
+          WebkitOverflowScrolling: "touch",
+        }}
+        onScroll={handleScroll}
+      >
+        <div style={{ height: padH }} />
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-center text-sm font-medium text-neutral-800"
+            style={{ height: WHEEL_ITEM_H, scrollSnapAlign: "center" }}
+          >
+            {item}
+          </div>
+        ))}
+        <div style={{ height: padH }} />
+      </div>
+    </div>
+  );
+}
+
+/* ── Rolling time picker (tap-to-open popup) ── */
+function WheelTimePicker({
   label,
   hour,
   minute,
@@ -35,6 +114,8 @@ function TimePicker({
   onHour,
   onMinute,
   onAmPm,
+  isOpen,
+  onToggle,
 }: {
   label: string;
   hour: number;
@@ -43,45 +124,68 @@ function TimePicker({
   onHour: (h: number) => void;
   onMinute: (m: number) => void;
   onAmPm: (a: "AM" | "PM") => void;
+  isOpen: boolean;
+  onToggle: () => void;
 }) {
-  const selBase =
-    "h-9 px-1 border border-neutral-300 rounded-lg bg-white text-sm outline-none shadow-xs flex-1 min-w-0";
+  const hourIdx = hour - 1;
+  const minuteIdx = Math.max(
+    0,
+    MINUTES.indexOf(String(minute).padStart(2, "0")),
+  );
+  const periodIdx = PERIODS.indexOf(ampm);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  /* close on outside click */
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
+        onToggle();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen, onToggle]);
+
+  const displayTime = `${hour}:${String(minute).padStart(2, "0")} ${ampm}`;
+
   return (
-    <div className="flex flex-col gap-1 min-w-0 overflow-hidden">
+    <div className="flex flex-col gap-1 flex-1 min-w-0" ref={wrapRef}>
       <span className="text-xs font-medium text-neutral-500">{label}</span>
-      <div className="flex items-center gap-1 min-w-0">
-        <select
-          className={selBase}
-          value={hour}
-          onChange={(e) => onHour(+e.target.value)}
-        >
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => (
-            <option key={h} value={h}>
-              {h}
-            </option>
-          ))}
-        </select>
-        <span className="text-neutral-400 shrink-0">:</span>
-        <select
-          className={selBase}
-          value={minute}
-          onChange={(e) => onMinute(+e.target.value)}
-        >
-          {[0, 15, 30, 45].map((m) => (
-            <option key={m} value={m}>
-              {String(m).padStart(2, "0")}
-            </option>
-          ))}
-        </select>
-        <select
-          className={selBase}
-          value={ampm}
-          onChange={(e) => onAmPm(e.target.value as "AM" | "PM")}
-        >
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
-      </div>
+      {/* Tappable display */}
+      <button
+        type="button"
+        className={`h-11 px-3 border rounded-lg bg-white text-sm font-medium text-neutral-800 text-center cursor-pointer transition-colors ${
+          isOpen
+            ? "border-brand-dark-green-2 ring-2 ring-brand-dark-green-2/20"
+            : "border-neutral-300"
+        }`}
+        onClick={onToggle}
+      >
+        {displayTime}
+      </button>
+      {/* Wheel popup */}
+      {isOpen && (
+        <div className="border border-neutral-300 rounded-lg bg-white shadow-xs overflow-hidden">
+          <div className="flex items-center">
+            <WheelColumn
+              items={HOURS}
+              selectedIndex={hourIdx}
+              onSelect={(i) => onHour(i + 1)}
+            />
+            <span className="text-neutral-400 shrink-0 text-sm">:</span>
+            <WheelColumn
+              items={MINUTES}
+              selectedIndex={minuteIdx}
+              onSelect={(i) => onMinute(+MINUTES[i])}
+            />
+            <WheelColumn
+              items={PERIODS}
+              selectedIndex={periodIdx}
+              onSelect={(i) => onAmPm(PERIODS[i] as "AM" | "PM")}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -101,6 +205,9 @@ function DeviceCard({
   const upd = (patch: Partial<DeviceEntry>) =>
     onChange({ ...device, ...patch });
 
+  /* only one picker open at a time: "on" | "off" | null */
+  const [openPicker, setOpenPicker] = useState<"on" | "off" | null>(null);
+
   return (
     <div className="border border-neutral-200 rounded-lg bg-white p-4 shadow-xs space-y-3 overflow-hidden">
       <div className="flex items-center justify-between">
@@ -117,7 +224,7 @@ function DeviceCard({
       </div>
 
       <SelectInput
-        label="Device"
+        label="Select device"
         value={device.deviceName}
         onChange={(v) => upd({ deviceName: v as DeviceName })}
         options={DEVICES.map((d) => d.name)}
@@ -125,7 +232,9 @@ function DeviceCard({
 
       {/* Quantity */}
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-neutral-500">Quantity</span>
+        <span className="text-base font-medium text-neutral-700">
+          Set quantity of appliance
+        </span>
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -148,35 +257,40 @@ function DeviceCard({
         </div>
       </div>
 
-      {/* Time pickers */}
-      <div className="flex flex-wrap gap-2">
-        <div className="flex-1 min-w-[140px]">
-          <TimePicker
-            label="ON Time"
+      {/* Usage hours */}
+      <div className="flex flex-col gap-1">
+        <span className="text-base font-medium text-neutral-700">
+          Usage hours
+        </span>
+        <div className="flex gap-2">
+          <WheelTimePicker
+            label="ON"
             hour={device.onTimeHour}
             minute={device.onTimeMinute}
             ampm={device.onTimeAmPm}
             onHour={(h) => upd({ onTimeHour: h })}
             onMinute={(m) => upd({ onTimeMinute: m })}
             onAmPm={(a) => upd({ onTimeAmPm: a })}
+            isOpen={openPicker === "on"}
+            onToggle={() => setOpenPicker((p) => (p === "on" ? null : "on"))}
           />
-        </div>
-        <div className="flex-1 min-w-[140px]">
-          <TimePicker
-            label="OFF Time"
+          <WheelTimePicker
+            label="OFF"
             hour={device.offTimeHour}
             minute={device.offTimeMinute}
             ampm={device.offTimeAmPm}
             onHour={(h) => upd({ offTimeHour: h })}
             onMinute={(m) => upd({ offTimeMinute: m })}
             onAmPm={(a) => upd({ offTimeAmPm: a })}
+            isOpen={openPicker === "off"}
+            onToggle={() => setOpenPicker((p) => (p === "off" ? null : "off"))}
           />
         </div>
       </div>
 
       {/* Days per week */}
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-neutral-500">
+        <span className="text-base font-medium text-neutral-700">
           Days per week
         </span>
         <select
@@ -232,7 +346,8 @@ export default function Step3Appliances() {
           <StepHeader
             step={3}
             totalSteps={4}
-            title="Thanks! Now, let's calculate your solar savings"
+            title="Add your appliances (optional)"
+            subtitle="This helps us size your system more accurately. You can add up to 7 devices."
           />
         </div>
 
@@ -249,23 +364,11 @@ export default function Step3Appliances() {
           />
         </div>
 
-        {/* Appliance section description (desktop) */}
-        <div className="hidden lg:block">
-          <p className="text-base font-medium text-neutral-700 leading-6">
-            Tell us about your home appliances (optional)
-          </p>
-          <p className="text-sm font-medium text-neutral-500 leading-5 mt-1">
-            Optional, but we highly recommend it! This helps us tailor the best
-            solar package for you, you can add up to 7 devices.
-          </p>
-        </div>
-
         {/* Note badge */}
         <div className="bg-green-50 rounded p-2 flex items-start gap-1.5">
           <p className="text-xs font-normal text-brand-dark-green leading-[18px]">
-            Note: Appliances added may affect daytime and nighttime energy
-            distribution. Adding a battery can help store excess solar for use
-            at night.
+            Note: This helps us determine if you need a battery based on when
+            you use the most power.
           </p>
         </div>
 

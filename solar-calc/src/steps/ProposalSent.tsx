@@ -91,10 +91,20 @@ export default function ProposalSent() {
               {/* Visit website */}
               <a
                 href="https://www.solvivaenergy.com"
-                className="w-full inline-flex items-center justify-center rounded-lg bg-brand-dark-green-2 px-6 py-3 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+                className="w-full inline-flex items-center justify-center rounded-lg bg-brand-lime px-6 py-3 text-sm font-bold text-brand-dark-green hover:brightness-95 transition-colors"
               >
-                Visit solvivaenergy.com
+                Go to website
               </a>
+              {/* Submit another inquiry */}
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = import.meta.env.BASE_URL || "/";
+                }}
+                className="w-full inline-flex items-center justify-center rounded-lg bg-neutral-200 px-6 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-300 transition-colors cursor-pointer"
+              >
+                Submit another inquiry
+              </button>
             </div>
           </div>
         </div>
