@@ -27,13 +27,28 @@ function defaultDevice(): DeviceEntry {
   };
 }
 
-/* ── Wheel column for rolling time picker ── */
-const WHEEL_ITEM_H = 36;
-const WHEEL_VISIBLE = 3;
-const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
-const MINUTES = ["00", "15", "30", "45"];
-const PERIODS = ["AM", "PM"];
+/* ── Wheel time picker (overlay) ── */
+const ITEM_H = 40;
+const VISIBLE = 5;
 
+/* 24 hourly options: 12 AM, 1 AM, … 11 AM, 12 PM, 1 PM, … 11 PM */
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const ampm = i < 12 ? "AM" : "PM";
+  const h = i % 12 === 0 ? 12 : i % 12;
+  return {
+    label: `${h}:00 ${ampm}`,
+    hour: h,
+    ampm: ampm as "AM" | "PM",
+  };
+});
+
+/** Convert (hour 1-12, ampm) → 0-23 index */
+function timeToIndex(hour: number, ampm: "AM" | "PM"): number {
+  if (ampm === "AM") return hour === 12 ? 0 : hour;
+  return hour === 12 ? 12 : hour + 12;
+}
+
+/* Single scroll-wheel column that fires onSelect when the user stops scrolling */
 function WheelColumn({
   items,
   selectedIndex,
@@ -44,96 +59,82 @@ function WheelColumn({
   onSelect: (index: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
-  const scrolling = useRef(false);
+  const isUserScrolling = useRef(false);
   const timer = useRef(0);
 
+  /* sync scroll position when selectedIndex changes externally */
   useEffect(() => {
-    if (ref.current && !scrolling.current) {
-      ref.current.scrollTop = selectedIndex * WHEEL_ITEM_H;
+    if (ref.current && !isUserScrolling.current) {
+      ref.current.scrollTop = selectedIndex * ITEM_H;
     }
   }, [selectedIndex]);
 
   const handleScroll = useCallback(() => {
-    scrolling.current = true;
+    isUserScrolling.current = true;
     clearTimeout(timer.current);
     timer.current = window.setTimeout(() => {
       const el = ref.current;
       if (!el) return;
-      const idx = Math.round(el.scrollTop / WHEEL_ITEM_H);
+      const idx = Math.round(el.scrollTop / ITEM_H);
       const clamped = Math.max(0, Math.min(items.length - 1, idx));
-      if (clamped !== selectedIndex) onSelect(clamped);
-      el.scrollTo({ top: clamped * WHEEL_ITEM_H, behavior: "smooth" });
-      scrolling.current = false;
-    }, 100);
-  }, [items.length, selectedIndex, onSelect]);
+      el.scrollTo({ top: clamped * ITEM_H, behavior: "smooth" });
+      onSelect(clamped);
+      isUserScrolling.current = false;
+    }, 80);
+  }, [items.length, onSelect]);
 
-  const padH = Math.floor(WHEEL_VISIBLE / 2) * WHEEL_ITEM_H;
+  const pad = Math.floor(VISIBLE / 2) * ITEM_H;
 
   return (
-    <div
-      className="relative overflow-hidden flex-1 min-w-0"
-      style={{ height: WHEEL_VISIBLE * WHEEL_ITEM_H }}
-    >
+    <div className="relative overflow-hidden w-full" style={{ height: VISIBLE * ITEM_H }}>
+      {/* highlight band */}
       <div
         className="absolute inset-x-0 border-y border-brand-dark-green-2/30 pointer-events-none z-10"
-        style={{ top: padH, height: WHEEL_ITEM_H }}
+        style={{ top: pad, height: ITEM_H }}
       />
-      <div className="absolute inset-x-0 top-0 h-9 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-9 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
+      {/* fade top / bottom */}
+      <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
+      <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
       <div
         ref={ref}
         className="h-full overflow-y-auto scrollbar-hide"
-        style={{
-          scrollSnapType: "y mandatory",
-          WebkitOverflowScrolling: "touch",
-        }}
+        style={{ scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch" }}
         onScroll={handleScroll}
       >
-        <div style={{ height: padH }} />
+        <div style={{ height: pad }} />
         {items.map((item, i) => (
           <div
             key={i}
             className="flex items-center justify-center text-sm font-medium text-neutral-800"
-            style={{ height: WHEEL_ITEM_H, scrollSnapAlign: "center" }}
+            style={{ height: ITEM_H, scrollSnapAlign: "center" }}
           >
             {item}
           </div>
         ))}
-        <div style={{ height: padH }} />
+        <div style={{ height: pad }} />
       </div>
     </div>
   );
 }
 
-/* ── Rolling time picker (tap-to-open popup) ── */
-function WheelTimePicker({
+/* Wrapper: tap the time box → overlay wheel appears on top of everything */
+function TimeWheelPicker({
   label,
   hour,
-  minute,
   ampm,
-  onHour,
-  onMinute,
-  onAmPm,
+  onSelect,
   isOpen,
   onToggle,
 }: {
   label: string;
   hour: number;
-  minute: number;
   ampm: "AM" | "PM";
-  onHour: (h: number) => void;
-  onMinute: (m: number) => void;
-  onAmPm: (a: "AM" | "PM") => void;
+  onSelect: (hour: number, ampm: "AM" | "PM") => void;
   isOpen: boolean;
   onToggle: () => void;
 }) {
-  const hourIdx = hour - 1;
-  const minuteIdx = Math.max(
-    0,
-    MINUTES.indexOf(String(minute).padStart(2, "0")),
-  );
-  const periodIdx = PERIODS.indexOf(ampm);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const selectedIdx = timeToIndex(hour, ampm);
 
   /* close on outside click */
   useEffect(() => {
@@ -146,12 +147,11 @@ function WheelTimePicker({
     return () => document.removeEventListener("mousedown", handler);
   }, [isOpen, onToggle]);
 
-  const displayTime = `${hour}:${String(minute).padStart(2, "0")} ${ampm}`;
+  const displayTime = `${hour}:00 ${ampm}`;
 
   return (
-    <div className="flex flex-col gap-1 flex-1 min-w-0" ref={wrapRef}>
+    <div className="relative flex flex-col gap-1 flex-1 min-w-0" ref={wrapRef}>
       <span className="text-xs font-medium text-neutral-500">{label}</span>
-      {/* Tappable display */}
       <button
         type="button"
         className={`h-11 px-3 border rounded-lg bg-white text-sm font-medium text-neutral-800 text-center cursor-pointer transition-colors ${
@@ -163,27 +163,17 @@ function WheelTimePicker({
       >
         {displayTime}
       </button>
-      {/* Wheel popup */}
+      {/* Wheel overlay — positioned absolute so nothing shifts */}
       {isOpen && (
-        <div className="border border-neutral-300 rounded-lg bg-white shadow-xs overflow-hidden">
-          <div className="flex items-center">
-            <WheelColumn
-              items={HOURS}
-              selectedIndex={hourIdx}
-              onSelect={(i) => onHour(i + 1)}
-            />
-            <span className="text-neutral-400 shrink-0 text-sm">:</span>
-            <WheelColumn
-              items={MINUTES}
-              selectedIndex={minuteIdx}
-              onSelect={(i) => onMinute(+MINUTES[i])}
-            />
-            <WheelColumn
-              items={PERIODS}
-              selectedIndex={periodIdx}
-              onSelect={(i) => onAmPm(PERIODS[i] as "AM" | "PM")}
-            />
-          </div>
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 border border-neutral-300 rounded-lg bg-white shadow-xs overflow-hidden">
+          <WheelColumn
+            items={TIME_OPTIONS.map((o) => o.label)}
+            selectedIndex={selectedIdx}
+            onSelect={(i) => {
+              const opt = TIME_OPTIONS[i];
+              onSelect(opt.hour, opt.ampm);
+            }}
+          />
         </div>
       )}
     </div>
@@ -209,7 +199,7 @@ function DeviceCard({
   const [openPicker, setOpenPicker] = useState<"on" | "off" | null>(null);
 
   return (
-    <div className="border border-neutral-200 rounded-lg bg-white p-4 shadow-xs space-y-3 overflow-hidden">
+    <div className="border border-neutral-200 rounded-lg bg-white p-4 shadow-xs space-y-3 overflow-visible">
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-neutral-700">
           Appliance {index + 1}
@@ -263,25 +253,23 @@ function DeviceCard({
           Usage hours
         </span>
         <div className="flex gap-2">
-          <WheelTimePicker
+          <TimeWheelPicker
             label="ON"
             hour={device.onTimeHour}
-            minute={device.onTimeMinute}
             ampm={device.onTimeAmPm}
-            onHour={(h) => upd({ onTimeHour: h })}
-            onMinute={(m) => upd({ onTimeMinute: m })}
-            onAmPm={(a) => upd({ onTimeAmPm: a })}
+            onSelect={(h, a) =>
+              upd({ onTimeHour: h, onTimeMinute: 0, onTimeAmPm: a })
+            }
             isOpen={openPicker === "on"}
             onToggle={() => setOpenPicker((p) => (p === "on" ? null : "on"))}
           />
-          <WheelTimePicker
+          <TimeWheelPicker
             label="OFF"
             hour={device.offTimeHour}
-            minute={device.offTimeMinute}
             ampm={device.offTimeAmPm}
-            onHour={(h) => upd({ offTimeHour: h })}
-            onMinute={(m) => upd({ offTimeMinute: m })}
-            onAmPm={(a) => upd({ offTimeAmPm: a })}
+            onSelect={(h, a) =>
+              upd({ offTimeHour: h, offTimeMinute: 0, offTimeAmPm: a })
+            }
             isOpen={openPicker === "off"}
             onToggle={() => setOpenPicker((p) => (p === "off" ? null : "off"))}
           />
