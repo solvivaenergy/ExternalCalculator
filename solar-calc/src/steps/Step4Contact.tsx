@@ -31,7 +31,7 @@ export default function Step4Contact() {
       progress={100}
       heroSrc={`${import.meta.env.BASE_URL}hero-step4.jpg`}
     >
-      <div className="flex flex-col gap-6 flex-1">
+      <div className="flex flex-col gap-6 flex-1 justify-center lg:mx-[200px] lg:my-0">
         <StepHeader
           step={4}
           totalSteps={4}

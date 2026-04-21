@@ -17,6 +17,12 @@ interface LayoutProps {
   fullWidth?: boolean;
   /** Hide the logo on mobile. */
   hideMobileLogo?: boolean;
+  /** Custom top padding for the logo (desktop only). Defaults to lg:pt-16. */
+  logoTopPadding?: string;
+  /** Custom top padding for the content area (desktop only). Defaults to lg:pt-8. */
+  contentTopPadding?: string;
+  /** Custom top margin for the logo (desktop only). */
+  logoMarginTop?: string;
 }
 
 export default function Layout({
@@ -25,22 +31,23 @@ export default function Layout({
   heroSrc,
   fullWidth,
   hideMobileLogo,
+  logoTopPadding = "lg:pt-16",
+  contentTopPadding = "lg:pt-8",
+  logoMarginTop,
 }: LayoutProps) {
   /* ── Full-width variant (Steps 5, 6) ── */
   if (fullWidth) {
     return (
       <div className="min-h-dvh bg-bg-main">
-        <div className="mx-auto max-w-[1440px]">
-          <div className="hidden lg:flex lg:justify-start lg:pt-16 lg:px-16">
+        <div className="mx-auto max-w-[1440px] lg:px-28">
+          <div className="hidden lg:flex lg:justify-start lg:pt-16">
             <img
               src={`${import.meta.env.BASE_URL}logo.webp`}
               alt="Solviva"
               className="h-12 w-auto"
             />
           </div>
-          <div className="px-8 pt-6 pb-12 lg:max-w-[960px] lg:mx-auto lg:px-0 lg:pt-8">
-            {children}
-          </div>
+          <div className="px-8 pt-6 pb-12 lg:px-0 lg:pt-8">{children}</div>
         </div>
       </div>
     );
@@ -63,7 +70,7 @@ export default function Layout({
 
         {/* Logo */}
         <div
-          className={`flex justify-center lg:justify-start pt-6 pb-2 lg:pt-20 lg:pb-0 lg:px-16${hideMobileLogo ? " hidden lg:flex" : ""}`}
+          className={`flex justify-center lg:justify-start pt-6 pb-2 ${logoTopPadding} lg:pb-0 lg:px-20 lg:mx-[200px] lg:my-0 ${logoMarginTop || ""}${hideMobileLogo ? " hidden lg:flex" : ""}`}
         >
           <img
             src={`${import.meta.env.BASE_URL}logo.webp`}
@@ -73,7 +80,9 @@ export default function Layout({
         </div>
 
         {/* Content area */}
-        <div className="flex-1 flex flex-col px-8 pb-6 lg:px-16 lg:pt-8 lg:pb-12">
+        <div
+          className={`flex-1 flex flex-col px-8 pb-6 lg:px-20 ${contentTopPadding} lg:pb-12`}
+        >
           {children}
         </div>
       </div>

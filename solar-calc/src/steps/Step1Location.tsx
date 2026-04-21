@@ -23,8 +23,14 @@ export default function Step1Location() {
   };
 
   return (
-    <Layout progress={25} heroSrc={`${import.meta.env.BASE_URL}hero-step1.jpg`}>
-      <div className="flex flex-col gap-6 flex-1 justify-center">
+    <Layout
+      progress={25}
+      heroSrc={`${import.meta.env.BASE_URL}hero-step1.jpg`}
+      logoTopPadding="lg:pt-0"
+      logoMarginTop="lg:mt-[50px]"
+      contentTopPadding="lg:pt-0"
+    >
+      <div className="flex flex-col gap-6 flex-1 justify-center lg:mx-[200px] lg:my-0 lg:-mt-20">
         <StepHeader
           step={1}
           totalSteps={4}

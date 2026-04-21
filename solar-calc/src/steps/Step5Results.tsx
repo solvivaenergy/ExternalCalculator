@@ -275,7 +275,7 @@ export default function Step5Results() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="lg:hidden flex items-center justify-center w-8 h-8 rounded-full cursor-pointer hover:bg-neutral-100 transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-full cursor-pointer hover:bg-neutral-100 transition-colors"
             onClick={() => setStep(4)}
           >
             <svg

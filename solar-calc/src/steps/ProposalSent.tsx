@@ -40,7 +40,7 @@ export default function ProposalSent() {
         </div>
 
         <div className="flex-1 flex items-center justify-center px-8 py-8">
-          <div className="bg-neutral-white rounded-2xl p-8 w-full max-w-md flex flex-col gap-8 shadow-md">
+          <div className="bg-neutral-white rounded-2xl p-8 w-full max-w-md lg:max-w-[682px] flex flex-col gap-8 shadow-md">
             {/* Header */}
             <div className="flex flex-col items-center gap-4">
               <CheckIcon />
@@ -55,7 +55,7 @@ export default function ProposalSent() {
             </div>
 
             {/* Body */}
-            <div className="flex flex-col gap-8">
+            <div className="flex flex-col gap-6">
               {/* What's included in the email */}
               <div className="flex flex-col gap-1">
                 <p className="text-lg font-semibold text-neutral-800 leading-7">
@@ -88,23 +88,26 @@ export default function ProposalSent() {
                 </p>
               </div>
 
-              {/* Visit website */}
-              <a
-                href="https://www.solvivaenergy.com"
-                className="w-full inline-flex items-center justify-center rounded-lg bg-brand-lime px-6 py-3 text-sm font-bold text-brand-dark-green hover:brightness-95 transition-colors"
-              >
-                Go to website
-              </a>
-              {/* Submit another inquiry */}
-              <button
-                type="button"
-                onClick={() => {
-                  window.location.href = import.meta.env.BASE_URL || "/";
-                }}
-                className="w-full inline-flex items-center justify-center rounded-lg bg-neutral-200 px-6 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-300 transition-colors cursor-pointer"
-              >
-                Submit another inquiry
-              </button>
+              {/* Buttons with reduced gap */}
+              <div className="flex flex-col gap-4">
+                {/* Visit website */}
+                <a
+                  href="https://www.solvivaenergy.com"
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-brand-lime px-6 py-3 text-sm font-bold text-brand-dark-green hover:brightness-95 transition-colors"
+                >
+                  Go to website
+                </a>
+                {/* Submit another inquiry */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.location.href = import.meta.env.BASE_URL || "/";
+                  }}
+                  className="w-full inline-flex items-center justify-center rounded-lg bg-neutral-200 px-6 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-300 transition-colors cursor-pointer"
+                >
+                  Submit another inquiry
+                </button>
+              </div>
             </div>
           </div>
         </div>

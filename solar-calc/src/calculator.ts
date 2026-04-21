@@ -358,13 +358,12 @@ export const QUALIFIED_AREAS = [
   "Rizal",
 ];
 
-export const PROPERTY_TYPES = ["House", "Townhouse", "Condo", "Commercial"] as const;
+export const PROPERTY_TYPES = ["Apartment", "Detached house", "Townhouse", "Condo"] as const;
 export const INSTALL_TIMELINES = [
-  "Within 1 month",
-  "1-3 months",
-  "3-6 months",
-  "6+ months",
-  "Just exploring",
+  "Within the month",
+  "Within the next 2 months",
+  "Within the next 6 months",
+  "Interested and not urgent",
 ] as const;
 
 export const MIN_BILL_THRESHOLD = 8000;

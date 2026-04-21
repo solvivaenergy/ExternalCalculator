@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+﻿import React, { type ReactNode } from "react";
 
 /* ── Step Header ── */
 export function StepHeader({
@@ -169,6 +169,111 @@ export function SelectInput({
             strokeLinejoin="round"
           />
         </svg>
+      </div>
+    </div>
+  );
+}
+
+/* ── Custom Dropdown with Controlled Height ── */
+export function CustomDropdown({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder = "Please select",
+  maxVisibleOptions = 6,
+}: {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: readonly string[];
+  placeholder?: string;
+  maxVisibleOptions?: number;
+}) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const dropdownRef = React.useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () =>
+        document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleSelect = (option: string) => {
+    onChange(option);
+    setIsOpen(false);
+  };
+
+  const displayValue = value || placeholder;
+
+  return (
+    <div className="flex flex-col gap-2" ref={dropdownRef}>
+      {label && (
+        <label className="text-base font-medium text-neutral-700 leading-6">
+          {label}
+        </label>
+      )}
+      <div className="relative">
+        <button
+          type="button"
+          className="w-full h-12 px-3.5 bg-white border border-neutral-300 rounded-lg shadow-xs text-base font-medium text-neutral-800 outline-none focus:ring-2 focus:ring-brand-blue/30 leading-6 text-left flex items-center justify-between"
+          onClick={() => setIsOpen(!isOpen)}
+        >
+          <span className={value ? "" : "text-neutral-600"}>
+            {displayValue}
+          </span>
+          <svg
+            className={`w-5 h-5 text-neutral-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 20 20"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path
+              d="M5 7.5L10 12.5L15 7.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        {isOpen && (
+          <div
+            className="absolute z-50 w-full mt-1 bg-white border border-neutral-300 rounded-lg shadow-lg overflow-hidden"
+            style={{ maxHeight: `${maxVisibleOptions * 40}px` }}
+          >
+            <div
+              className="overflow-y-auto"
+              style={{ maxHeight: `${maxVisibleOptions * 40}px` }}
+            >
+              {options.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`w-full px-3.5 py-2 text-left text-base font-medium hover:bg-neutral-100 transition-colors ${
+                    value === option
+                      ? "bg-brand-blue/10 text-brand-blue"
+                      : "text-neutral-800"
+                  }`}
+                  onClick={() => handleSelect(option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

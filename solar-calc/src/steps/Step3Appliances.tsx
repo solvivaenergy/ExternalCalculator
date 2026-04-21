@@ -1,5 +1,4 @@
-﻿import { useState, useRef, useEffect, useCallback } from "react";
-import { Plus, Trash2 } from "lucide-react";
+﻿import { Plus, Trash2 } from "lucide-react";
 import { useWizard } from "../context/WizardContext";
 import { DEVICES, type DeviceEntry, type DeviceName } from "../calculator";
 import Layout from "../components/Layout";
@@ -7,6 +6,7 @@ import {
   StepHeader,
   TextInput,
   SelectInput,
+  CustomDropdown,
   Button,
   ButtonFooter,
 } from "../components/ui";
@@ -27,157 +27,23 @@ function defaultDevice(): DeviceEntry {
   };
 }
 
-/* ── Wheel time picker (overlay) ── */
-const ITEM_H = 40;
-const VISIBLE = 5;
-
 /* 24 hourly options: 12 AM, 1 AM, … 11 AM, 12 PM, 1 PM, … 11 PM */
 const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
   const ampm = i < 12 ? "AM" : "PM";
   const h = i % 12 === 0 ? 12 : i % 12;
-  return {
-    label: `${h}:00 ${ampm}`,
-    hour: h,
-    ampm: ampm as "AM" | "PM",
-  };
+  return `${h}:00 ${ampm}`;
 });
 
-/** Convert (hour 1-12, ampm) → 0-23 index */
-function timeToIndex(hour: number, ampm: "AM" | "PM"): number {
-  if (ampm === "AM") return hour === 12 ? 0 : hour;
-  return hour === 12 ? 12 : hour + 12;
+/** Convert (hour 1-12, ampm) → time string */
+function timeToString(hour: number, ampm: "AM" | "PM"): string {
+  return `${hour}:00 ${ampm}`;
 }
 
-/* Single scroll-wheel column that fires onSelect when the user stops scrolling */
-function WheelColumn({
-  items,
-  selectedIndex,
-  onSelect,
-}: {
-  items: string[];
-  selectedIndex: number;
-  onSelect: (index: number) => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const isUserScrolling = useRef(false);
-  const timer = useRef(0);
-
-  /* sync scroll position when selectedIndex changes externally */
-  useEffect(() => {
-    if (ref.current && !isUserScrolling.current) {
-      ref.current.scrollTop = selectedIndex * ITEM_H;
-    }
-  }, [selectedIndex]);
-
-  const handleScroll = useCallback(() => {
-    isUserScrolling.current = true;
-    clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => {
-      const el = ref.current;
-      if (!el) return;
-      const idx = Math.round(el.scrollTop / ITEM_H);
-      const clamped = Math.max(0, Math.min(items.length - 1, idx));
-      el.scrollTo({ top: clamped * ITEM_H, behavior: "smooth" });
-      onSelect(clamped);
-      isUserScrolling.current = false;
-    }, 80);
-  }, [items.length, onSelect]);
-
-  const pad = Math.floor(VISIBLE / 2) * ITEM_H;
-
-  return (
-    <div className="relative overflow-hidden w-full" style={{ height: VISIBLE * ITEM_H }}>
-      {/* highlight band */}
-      <div
-        className="absolute inset-x-0 border-y border-brand-dark-green-2/30 pointer-events-none z-10"
-        style={{ top: pad, height: ITEM_H }}
-      />
-      {/* fade top / bottom */}
-      <div className="absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-white to-transparent pointer-events-none z-10" />
-      <div
-        ref={ref}
-        className="h-full overflow-y-auto scrollbar-hide"
-        style={{ scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch" }}
-        onScroll={handleScroll}
-      >
-        <div style={{ height: pad }} />
-        {items.map((item, i) => (
-          <div
-            key={i}
-            className="flex items-center justify-center text-sm font-medium text-neutral-800"
-            style={{ height: ITEM_H, scrollSnapAlign: "center" }}
-          >
-            {item}
-          </div>
-        ))}
-        <div style={{ height: pad }} />
-      </div>
-    </div>
-  );
-}
-
-/* Wrapper: tap the time box → overlay wheel appears on top of everything */
-function TimeWheelPicker({
-  label,
-  hour,
-  ampm,
-  onSelect,
-  isOpen,
-  onToggle,
-}: {
-  label: string;
-  hour: number;
-  ampm: "AM" | "PM";
-  onSelect: (hour: number, ampm: "AM" | "PM") => void;
-  isOpen: boolean;
-  onToggle: () => void;
-}) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const selectedIdx = timeToIndex(hour, ampm);
-
-  /* close on outside click */
-  useEffect(() => {
-    if (!isOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
-        onToggle();
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [isOpen, onToggle]);
-
-  const displayTime = `${hour}:00 ${ampm}`;
-
-  return (
-    <div className="relative flex flex-col gap-1 flex-1 min-w-0" ref={wrapRef}>
-      <span className="text-xs font-medium text-neutral-500">{label}</span>
-      <button
-        type="button"
-        className={`h-11 px-3 border rounded-lg bg-white text-sm font-medium text-neutral-800 text-center cursor-pointer transition-colors ${
-          isOpen
-            ? "border-brand-dark-green-2 ring-2 ring-brand-dark-green-2/20"
-            : "border-neutral-300"
-        }`}
-        onClick={onToggle}
-      >
-        {displayTime}
-      </button>
-      {/* Wheel overlay — positioned absolute so nothing shifts */}
-      {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 border border-neutral-300 rounded-lg bg-white shadow-xs overflow-hidden">
-          <WheelColumn
-            items={TIME_OPTIONS.map((o) => o.label)}
-            selectedIndex={selectedIdx}
-            onSelect={(i) => {
-              const opt = TIME_OPTIONS[i];
-              onSelect(opt.hour, opt.ampm);
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
+/** Convert time string → (hour 1-12, ampm) */
+function stringToTime(str: string): { hour: number; ampm: "AM" | "PM" } {
+  const match = str.match(/^(\d+):00\s+(AM|PM)$/);
+  if (!match) return { hour: 12, ampm: "AM" };
+  return { hour: parseInt(match[1]), ampm: match[2] as "AM" | "PM" };
 }
 
 /* ── Device card ── */
@@ -194,9 +60,6 @@ function DeviceCard({
 }) {
   const upd = (patch: Partial<DeviceEntry>) =>
     onChange({ ...device, ...patch });
-
-  /* only one picker open at a time: "on" | "off" | null */
-  const [openPicker, setOpenPicker] = useState<"on" | "off" | null>(null);
 
   return (
     <div className="border border-neutral-200 rounded-lg bg-white p-4 shadow-xs space-y-3 overflow-visible">
@@ -253,29 +116,32 @@ function DeviceCard({
           Usage hours
         </span>
         <div className="flex gap-2">
-          <TimeWheelPicker
-            label="ON"
-            hour={device.onTimeHour}
-            ampm={device.onTimeAmPm}
-            onSelect={(h, a) =>
-              upd({ onTimeHour: h, onTimeMinute: 0, onTimeAmPm: a })
-            }
-            isOpen={openPicker === "on"}
-            onToggle={() => setOpenPicker((p) => (p === "on" ? null : "on"))}
-          />
-          <TimeWheelPicker
-            label="OFF"
-            hour={device.offTimeHour}
-            ampm={device.offTimeAmPm}
-            onSelect={(h, a) =>
-              upd({ offTimeHour: h, offTimeMinute: 0, offTimeAmPm: a })
-            }
-            isOpen={openPicker === "off"}
-            onToggle={() => setOpenPicker((p) => (p === "off" ? null : "off"))}
-          />
+          <div className="flex-1">
+            <CustomDropdown
+              label="ON"
+              value={timeToString(device.onTimeHour, device.onTimeAmPm)}
+              onChange={(v) => {
+                const { hour, ampm } = stringToTime(v);
+                upd({ onTimeHour: hour, onTimeMinute: 0, onTimeAmPm: ampm });
+              }}
+              options={TIME_OPTIONS}
+              maxVisibleOptions={6}
+            />
+          </div>
+          <div className="flex-1">
+            <CustomDropdown
+              label="OFF"
+              value={timeToString(device.offTimeHour, device.offTimeAmPm)}
+              onChange={(v) => {
+                const { hour, ampm } = stringToTime(v);
+                upd({ offTimeHour: hour, offTimeMinute: 0, offTimeAmPm: ampm });
+              }}
+              options={TIME_OPTIONS}
+              maxVisibleOptions={6}
+            />
+          </div>
         </div>
       </div>
-
       {/* Days per week */}
       <div className="flex flex-col gap-1">
         <span className="text-base font-medium text-neutral-700">
@@ -319,7 +185,7 @@ export default function Step3Appliances() {
 
   return (
     <Layout progress={75} heroSrc={`${import.meta.env.BASE_URL}hero-step3.jpg`}>
-      <div className="flex flex-col gap-6 flex-1">
+      <div className="flex flex-col gap-6 flex-1 justify-center lg:mx-[200px] lg:my-0">
         {/* Mobile title */}
         <div className="lg:hidden">
           <StepHeader
