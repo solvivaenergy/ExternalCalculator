@@ -205,19 +205,6 @@ export default function Step3Appliances() {
           />
         </div>
 
-        {/* Bill field (desktop only — editable, pre-filled from Step 2) */}
-        <div className="hidden lg:block">
-          <TextInput
-            label="Average monthly bill"
-            value={formData.electricityBill}
-            onChange={(v) =>
-              updateForm({ electricityBill: v.replace(/[^0-9.]/g, "") })
-            }
-            prefix="₱"
-            placeholder="10,000"
-          />
-        </div>
-
         {/* Note badge */}
         <div className="bg-green-50 rounded p-2 flex items-start gap-1.5">
           <p className="text-xs font-normal text-brand-dark-green leading-[18px]">
