@@ -1,0 +1,38 @@
+name              = "calculator-proxy"
+main              = "src/worker.js"
+compatibility_date = "2024-09-23"
+
+# ── Routes: match the existing Worker Routes in your Cloudflare dashboard ─────
+[[routes]]
+pattern   = "solvivaenergy.com/calculator*"
+zone_name = "solvivaenergy.com"
+
+[[routes]]
+pattern   = "www.solvivaenergy.com/calculator*"
+zone_name = "solvivaenergy.com"
+
+# ── Secrets — DO NOT put real values here. Set them with the CLI: ─────────────
+#
+#   npx wrangler secret put PASSWORD_HASH
+#     Paste the SHA-256 hex of your password (64 lowercase hex chars).
+#     Quick way to generate it (Linux/Mac):
+#       echo -n "yourpassword" | sha256sum
+#     Windows PowerShell:
+#       [System.BitConverter]::ToString(
+#         [System.Security.Cryptography.SHA256]::Create().ComputeHash(
+#           [System.Text.Encoding]::UTF8.GetBytes("yourpassword")
+#         )
+#       ).Replace("-","").ToLower()
+#
+#   npx wrangler secret put HMAC_SECRET
+#     Any random 32+ character string for signing session tokens.
+#     Generate with: openssl rand -hex 32
+#
+#   npx wrangler secret put ORIGIN_URL
+#     Your GitHub Pages origin, e.g.:
+#       https://yourusername.github.io/ExternalCalculator
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# Deploy with:
+#   npx wrangler deploy
+# ─────────────────────────────────────────────────────────────────────────────
