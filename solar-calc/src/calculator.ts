@@ -208,10 +208,20 @@ function calcSystemTier(
   withBattery: boolean,
   label: string
 ): SystemTier {
-  // Panel sizing (from CALCULATOR Q32-Q33)
-  const battNight = withBattery ? nightTimeKwh / BATTERY_EFFICIENCY / BATTERY_DOD : 0;
-  const dailyCapacity = (dayTimeKwh + battNight) * 12 / 365;
-  const panelsRaw = (savingsFactor * dailyCapacity * 1000) / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
+  // Panel sizing
+  let panelsRaw: number;
+  if (withBattery) {
+    // Battery tiers: size to cover (day + night/battery) at the savings factor
+    const battNight = nightTimeKwh / BATTERY_EFFICIENCY / BATTERY_DOD;
+    const dailyCapacity = (dayTimeKwh + battNight) * 12 / 365;
+    panelsRaw = (savingsFactor * dailyCapacity * 1000) / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
+  } else {
+    // No-battery starter: size so that (production × dayTimePct) = savingsFactor × totalConsumption
+    // i.e. system produces enough during the day to cover the target % of the full bill
+    const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
+    const neededMonthlyProduction = (savingsFactor * monthlyConsumptionKwh) / dayTimePct;
+    panelsRaw = (neededMonthlyProduction / 30) * 1000 / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
+  }
   const panels = Math.max(8, Math.ceil(panelsRaw)); // minimum 8 panels = ~5 kWp (smallest package)
   const kwpSystem = (panels * PANEL_CAPACITY_W) / 1000;
 
