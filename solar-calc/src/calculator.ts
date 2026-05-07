@@ -325,9 +325,9 @@ export function calculate(inputs: CalcInputs): CalcResult {
   const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
 
   let usageProfile: string;
-  if (dayTimePct >= 0.6) usageProfile = "Daytime User";
-  else if (dayTimePct <= 0.4) usageProfile = "Nighttime User";
-  else usageProfile = "Balanced User";
+  if (dayTimePct > 0.5) usageProfile = "Day Time User";
+  else if (dayTimePct < 0.5) usageProfile = "Night Time User";
+  else usageProfile = "Equal";
 
   // 3 tiers
   const starter = calcSystemTier(0.5, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, false, "Starter System");

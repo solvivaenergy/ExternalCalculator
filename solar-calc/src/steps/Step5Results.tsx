@@ -304,20 +304,15 @@ export default function Step5Results() {
           <SummaryCard
             icon={<SunIcon />}
             value={result.usageProfile}
-            label=""
+            label={`${result.dayTimePct}% day · ${100 - result.dayTimePct}% night`}
             description={
-              result.usageProfile === "Daytime User"
+              result.usageProfile === "Day Time User"
                 ? "You consume most electricity during daylight hours when solar produces maximum power"
-                : result.usageProfile === "Nighttime User"
+                : result.usageProfile === "Night Time User"
                   ? "You consume most electricity at night — a battery can help store solar for later"
                   : "Your energy usage is evenly distributed between day and night"
             }
           />
-        </div>
-
-        {/* Chart placeholder */}
-        <div className="h-[154px] bg-white border border-neutral-300 rounded shadow-xs flex items-center justify-center text-sm text-neutral-500">
-          Solar production vs consumption chart
         </div>
 
         {/* Info badge */}
