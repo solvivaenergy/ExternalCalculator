@@ -306,7 +306,7 @@ export function calculate(inputs: CalcInputs): CalcResult {
   else usageProfile = "Balanced User";
 
   // 3 tiers
-  const starter = calcSystemTier(0.5, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, false, "Starter System");
+  const starter = calcSystemTier(0.3, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, false, "Starter System");
   const recommended = calcSystemTier(0.5, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "With Battery");
   const full = calcSystemTier(1.0, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "Full Independence");
 
