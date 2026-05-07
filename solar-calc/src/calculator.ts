@@ -24,19 +24,19 @@ export type DeviceName = (typeof DEVICES)[number]["name"];
 // Constants from ADMIN sheet
 const PANEL_CAPACITY_W = 630;
 const KWH_PER_KWP_PER_DAY = 3.6;
-const RTO_INTEREST_RATE = 0.28;
+const BASE_RTO_RATE = 0.28;
+const RISK_PREMIUM_RATE = 0.30; // <8 panels — from ADMIN!C19 + C21/10000
+const RISK_PREMIUM_PANELS = 8;  // ADMIN!C20
 const BATTERY_EFFICIENCY = 0.98;
 const BATTERY_DOD = 0.95;
 const PANEL_DEGRADATION = 0.005; // per year
 // const MAINTENANCE_INFLATION = 0.03;
 // const NET_METERING_EFFICIENCY = 0.5;
 
-// Pricing per panel (60-mo RTO)
-const PRICE_PER_PANEL_RTO = 14139.33;
-const MIN_MOUNTING_SUPPORT_RTO = 11795.88;
+// Pricing per panel
+const PRICE_PER_PANEL_DP = 7745.23;
+const MIN_MOUNTING_SUPPORT_DP = 6461.54;
 const MOUNTING_PCT = 0.16;
-
-// Cable percentage lookup (panels → total cable pct)
 const CABLE_PCT_TABLE = [
   { panels: 1, total: 0.69 },
   { panels: 8, total: 0.69 },
@@ -50,47 +50,32 @@ const CABLE_PCT_TABLE = [
 
 // Inverter lookup (kWp → inverter)
 const INVERTERS = [
-  { minKwp: 0.01, name: "5.00 kW Inverter", ratedKw: 5, priceRTO: 121104.38, priceDP: 66338.46 },
-  { minKwp: 5, name: "6.00 kW Inverter", ratedKw: 6, priceRTO: 136832.22, priceDP: 74953.85 },
-  { minKwp: 6, name: "8.00 kW Inverter", ratedKw: 8, priceRTO: 180870.17, priceDP: 99076.92 },
-  { minKwp: 8, name: "12.00 kW Inverter", ratedKw: 12, priceRTO: 253218.24, priceDP: 138707.69 },
-  { minKwp: 12, name: "16.00 kW Inverter", ratedKw: 16, priceRTO: 344439.72, priceDP: 188676.92 },
+  { minKwp: 0.01, name: "5.00 kW Inverter", ratedKw: 5, priceDP: 66338.46 },
+  { minKwp: 5, name: "6.00 kW Inverter", ratedKw: 6, priceDP: 74953.85 },
+  { minKwp: 6, name: "8.00 kW Inverter", ratedKw: 8, priceDP: 99076.92 },
+  { minKwp: 8, name: "12.00 kW Inverter", ratedKw: 12, priceDP: 138707.69 },
+  { minKwp: 12, name: "16.00 kW Inverter", ratedKw: 16, priceDP: 188676.92 },
 ];
 
-// Battery pricing (60-mo RTO)
-const BATTERY_PACK_RTO = 135573.99;
-const BATTERY_RACK_RTO = 15727.84;
-const ATS_RTO = 18873.41;
-const CRITICAL_LOADS_RTO = 6920.25;
-const BATTERY_LABOR_W_SOLAR_RTO = 33028.47;
-
-// Labor & fixed overhead
-const SOLAR_LABOR_PER_KWP_RTO = 14155.06;
-const FIXED_OVERHEAD_RTO = 35554.75;
-
-// Direct purchase equivalents
-const PRICE_PER_PANEL_DP = 7745.23;
-const MIN_MOUNTING_SUPPORT_DP = 6461.54;
-const SOLAR_LABOR_PER_KWP_DP = 7753.85;
-const FIXED_OVERHEAD_DP = 19476.15;
+// Battery pricing (direct purchase)
 const BATTERY_PACK_DP = 74264.62;
 const BATTERY_RACK_DP = 8615.38;
 const ATS_DP = 10338.46;
 const CRITICAL_LOADS_DP = 3790.77;
 const BATTERY_LABOR_W_SOLAR_DP = 18092.31;
 
+// Labor & fixed overhead (direct purchase)
+const SOLAR_LABOR_PER_KWP_DP = 7753.85;
+const FIXED_OVERHEAD_DP = 19476.15;
+
 // ─── Helpers ───
 
-function pmtFormula(rate: number, nper: number, pv: number): number {
-  if (rate === 0) return -pv / nper;
-  const factor = Math.pow(1 + rate, nper);
-  return (-pv * rate * factor) / (factor - 1);
-}
-
-function pvFormula(rate: number, nper: number, pmt: number): number {
-  if (rate === 0) return -pmt * nper;
-  const factor = Math.pow(1 + rate, nper);
-  return (-pmt * (factor - 1)) / (rate * factor);
+// Convert a direct-purchase price to 60-month RTO price (annuity due — matches Excel PMT(...,1)*60)
+function dpToRto(dp: number, annualRate: number): number {
+  const r = annualRate / 12;
+  const n = 60;
+  const factor = Math.pow(1 + r, n);
+  return dp * r * factor / ((factor - 1) * (1 + r)) * n;
 }
 
 function lookupCablePct(panels: number): number {
@@ -230,23 +215,11 @@ function calcSystemTier(
   const panels = Math.max(1, Math.ceil(panelsRaw));
   const kwpSystem = (panels * PANEL_CAPACITY_W) / 1000;
 
-  // Pricing — RTO (60-month)
-  const panelsCostRTO = panels * PRICE_PER_PANEL_RTO;
-  const mountingRTO = Math.max(MIN_MOUNTING_SUPPORT_RTO, panelsCostRTO * MOUNTING_PCT);
+  // Actual interest rate — 2% risk premium for systems under 8 panels (ADMIN!C22)
+  const actualRate = panels < RISK_PREMIUM_PANELS ? RISK_PREMIUM_RATE : BASE_RTO_RATE;
+
   const cablePct = lookupCablePct(panels);
-  const cablesRTO = cablePct * panelsCostRTO;
-  const laborRTO = kwpSystem * SOLAR_LABOR_PER_KWP_RTO + FIXED_OVERHEAD_RTO;
   const inverter = lookupInverter(kwpSystem);
-  const inverterRTO = inverter.priceRTO;
-
-  let batteryTotalRTO = 0;
-  let batteryKwh = 0;
-  if (withBattery) {
-    batteryKwh = 5; // Standard 5kW Pylontech
-    batteryTotalRTO = BATTERY_PACK_RTO + BATTERY_RACK_RTO + ATS_RTO + CRITICAL_LOADS_RTO + BATTERY_LABOR_W_SOLAR_RTO;
-  }
-
-  const totalRTO = panelsCostRTO + mountingRTO + cablesRTO + laborRTO + inverterRTO + batteryTotalRTO;
 
   // Direct purchase price
   const panelsCostDP = panels * PRICE_PER_PANEL_DP;
@@ -254,16 +227,19 @@ function calcSystemTier(
   const cablesDP = cablePct * panelsCostDP;
   const laborDP = kwpSystem * SOLAR_LABOR_PER_KWP_DP + FIXED_OVERHEAD_DP;
   const inverterDP = inverter.priceDP;
+
   let batteryTotalDP = 0;
+  let batteryKwh = 0;
   if (withBattery) {
+    batteryKwh = 5; // Standard 5kW Pylontech
     batteryTotalDP = BATTERY_PACK_DP + BATTERY_RACK_DP + ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
   }
+
   const totalDP = panelsCostDP + mountingDP + cablesDP + laborDP + inverterDP + batteryTotalDP;
 
-  // Monthly payment (60-month RTO, from M9 formula)
-  const monthlyRate = RTO_INTEREST_RATE / 12;
-  const pvOfTotal = pvFormula(monthlyRate, 60, -totalRTO / 60);
-  const monthlyPaymentRTO = -pmtFormula(monthlyRate, 60, pvOfTotal);
+  // RTO price — derived from DP at actual rate (annuity due, 60-mo), matching Excel ADMIN!E28 pattern
+  const totalRTO = dpToRto(totalDP, actualRate);
+  const monthlyPaymentRTO = totalRTO / 60;
 
   // Savings
   const monthlySavings = electricityRate * monthlyConsumptionKwh * savingsFactor;
