@@ -241,9 +241,10 @@ function calcSystemTier(
   const totalRTO = dpToRto(totalDP, actualRate);
   const monthlyPaymentRTO = totalRTO / 60;
 
-  // Savings
-  const monthlySavings = electricityRate * monthlyConsumptionKwh * savingsFactor;
-  const savingsPct = savingsFactor;
+  // Savings — without battery only daytime consumption is offset by solar
+  const coverableKwh = withBattery ? monthlyConsumptionKwh : dayTimeKwh;
+  const monthlySavings = electricityRate * coverableKwh * savingsFactor;
+  const savingsPct = monthlyConsumptionKwh > 0 ? (coverableKwh * savingsFactor) / monthlyConsumptionKwh : savingsFactor;
 
   // Payback (simple) — from SCHEDULE X3 formula
   const annualSavings = monthlySavings * 12;
