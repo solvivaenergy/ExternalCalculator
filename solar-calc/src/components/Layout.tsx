@@ -70,7 +70,7 @@ export default function Layout({
 
         {/* Logo */}
         <div
-          className={`flex justify-center lg:justify-start pt-6 pb-2 ${logoTopPadding} lg:pb-0 lg:px-20 lg:mx-[200px] lg:my-0 ${logoMarginTop || ""}${hideMobileLogo ? " hidden lg:flex" : ""}`}
+          className={`flex justify-center lg:justify-start pt-6 pb-2 ${logoTopPadding} lg:pb-0 lg:px-20 lg:max-w-4xl lg:mx-auto lg:my-0 ${logoMarginTop || ""}${hideMobileLogo ? " hidden lg:flex" : ""}`}
         >
           <img
             src={`${import.meta.env.BASE_URL}logo.webp`}

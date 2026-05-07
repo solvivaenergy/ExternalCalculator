@@ -30,7 +30,7 @@ export default function Step1Location() {
       logoMarginTop="lg:mt-[50px]"
       contentTopPadding="lg:pt-0"
     >
-      <div className="flex flex-col gap-6 flex-1 justify-center lg:mx-[200px] lg:my-0 lg:-mt-20">
+      <div className="flex flex-col gap-6 flex-1 justify-center lg:max-w-4xl lg:mx-auto lg:my-0 lg:-mt-20">
         <StepHeader
           step={1}
           totalSteps={4}
