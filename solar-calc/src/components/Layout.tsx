@@ -68,22 +68,25 @@ export default function Layout({
           </div>
         )}
 
-        {/* Logo */}
-        <div
-          className={`flex justify-center lg:justify-start pt-6 pb-2 ${logoTopPadding} lg:pb-0 lg:px-20 lg:w-full lg:max-w-4xl lg:mx-auto lg:my-0 ${logoMarginTop || ""}${hideMobileLogo ? " hidden lg:flex" : ""}`}
-        >
-          <img
-            src={`${import.meta.env.BASE_URL}logo.webp`}
-            alt="Solviva"
-            className="h-12 w-auto"
-          />
-        </div>
+        {/* Shared centered wrapper — constrains both logo and content to the same box */}
+        <div className="flex-1 flex flex-col lg:w-full lg:max-w-4xl lg:mx-auto">
+          {/* Logo */}
+          <div
+            className={`flex justify-center lg:justify-start pt-6 pb-2 ${logoTopPadding} lg:pb-0 lg:px-20 ${logoMarginTop || ""}${hideMobileLogo ? " hidden lg:flex" : ""}`}
+          >
+            <img
+              src={`${import.meta.env.BASE_URL}logo.webp`}
+              alt="Solviva"
+              className="h-12 w-auto"
+            />
+          </div>
 
-        {/* Content area */}
-        <div
-          className={`flex-1 flex flex-col px-8 pb-6 lg:px-20 ${contentTopPadding} lg:pb-12`}
-        >
-          {children}
+          {/* Content area */}
+          <div
+            className={`flex-1 flex flex-col px-8 pb-6 lg:px-20 ${contentTopPadding} lg:pb-12`}
+          >
+            {children}
+          </div>
         </div>
       </div>
 

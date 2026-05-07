@@ -57,7 +57,7 @@ export default function Disqualified() {
 
   return (
     <Layout heroSrc={`${import.meta.env.BASE_URL}hero-dq.jpg`} hideMobileLogo>
-      <div className="flex flex-col gap-[10px] flex-1 lg:w-full lg:max-w-4xl lg:mx-auto">
+      <div className="flex flex-col gap-[10px] flex-1">
         {/* Hero image (mobile only) */}
         <div className="lg:hidden -mx-8 -mt-2">
           <img
