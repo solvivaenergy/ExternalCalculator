@@ -241,10 +241,20 @@ function calcSystemTier(
   const totalRTO = dpToRto(totalDP, actualRate);
   const monthlyPaymentRTO = totalRTO / 60;
 
-  // Savings — without battery only daytime consumption is offset by solar
-  const coverableKwh = withBattery ? monthlyConsumptionKwh : dayTimeKwh;
-  const monthlySavings = electricityRate * coverableKwh * savingsFactor;
-  const savingsPct = monthlyConsumptionKwh > 0 ? (coverableKwh * savingsFactor) / monthlyConsumptionKwh : savingsFactor;
+  // Savings
+  // With battery: covers full consumption at the savings factor
+  // Without battery: system production * dayTimePct (fraction of solar that overlaps with daytime usage),
+  //   capped at actual daytime consumption (can't save more than you use during the day)
+  let savingsKwh: number;
+  if (withBattery) {
+    savingsKwh = monthlyConsumptionKwh * savingsFactor;
+  } else {
+    const monthlyProduction = kwpSystem * KWH_PER_KWP_PER_DAY * 30;
+    const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
+    savingsKwh = Math.min(monthlyProduction * dayTimePct, dayTimeKwh);
+  }
+  const monthlySavings = electricityRate * savingsKwh;
+  const savingsPct = monthlyConsumptionKwh > 0 ? savingsKwh / monthlyConsumptionKwh : 0;
 
   // Payback (simple) — from SCHEDULE X3 formula
   const annualSavings = monthlySavings * 12;
