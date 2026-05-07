@@ -212,7 +212,7 @@ function calcSystemTier(
   const battNight = withBattery ? nightTimeKwh / BATTERY_EFFICIENCY / BATTERY_DOD : 0;
   const dailyCapacity = (dayTimeKwh + battNight) * 12 / 365;
   const panelsRaw = (savingsFactor * dailyCapacity * 1000) / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
-  const panels = Math.max(1, Math.ceil(panelsRaw));
+  const panels = Math.max(8, Math.ceil(panelsRaw)); // minimum 8 panels = ~5 kWp (smallest package)
   const kwpSystem = (panels * PANEL_CAPACITY_W) / 1000;
 
   // Actual interest rate — 2% risk premium for systems under 8 panels (ADMIN!C22)
