@@ -4,7 +4,6 @@ import { DEVICES, type DeviceEntry, type DeviceName } from "../calculator";
 import Layout from "../components/Layout";
 import {
   StepHeader,
-  TextInput,
   SelectInput,
   CustomDropdown,
   Button,
