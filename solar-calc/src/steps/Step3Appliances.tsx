@@ -185,7 +185,7 @@ export default function Step3Appliances() {
 
   return (
     <Layout progress={75} heroSrc={`${import.meta.env.BASE_URL}hero-step3.jpg`}>
-      <div className="flex flex-col gap-6 flex-1 justify-center lg:max-w-4xl lg:mx-auto lg:my-0">
+      <div className="flex flex-col gap-6 flex-1 justify-center lg:w-full lg:max-w-4xl lg:mx-auto lg:my-0">
         {/* Mobile title */}
         <div className="lg:hidden">
           <StepHeader
