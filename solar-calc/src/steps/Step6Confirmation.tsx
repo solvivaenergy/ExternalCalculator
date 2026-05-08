@@ -138,9 +138,6 @@ export default function Step6Confirmation() {
 
         <div className="order-3">
           <ButtonFooter>
-            <Button variant="secondary" onClick={() => setStep(5)}>
-              Download PDF
-            </Button>
             <Button onClick={() => setStep(7)}>Send me a copy</Button>
           </ButtonFooter>
         </div>
