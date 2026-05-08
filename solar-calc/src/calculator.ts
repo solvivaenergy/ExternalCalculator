@@ -212,34 +212,31 @@ function calcDeviceKwh(device: DeviceEntry): { dayKwh: number; nightKwh: number 
 // ─── Main calculation ───
 
 function calcSystemTier(
-  savingsFactorOrPanels: number,
+  savingsFactor: number,
   monthlyConsumptionKwh: number,
   dayTimeKwh: number,
   nightTimeKwh: number,
   electricityRate: number,
   withBattery: boolean,
-  label: string
+  label: string,
+  snapToFixed = true
 ): SystemTier {
   // Panel sizing
-  // If savingsFactorOrPanels is a whole number ≥ 8 it is treated as a direct panel count override
-  // (used for the Full tier which is always pinned to the largest fixed size)
-  const isFixedOverride = Number.isInteger(savingsFactorOrPanels) && savingsFactorOrPanels >= 8;
   let panelsRaw: number;
-  if (isFixedOverride) {
-    panelsRaw = savingsFactorOrPanels;
-  } else if (withBattery) {
+  if (withBattery) {
     // Battery tiers: size to cover (day + night/battery) at the savings factor
     const battNight = nightTimeKwh / BATTERY_EFFICIENCY / BATTERY_DOD;
     const dailyCapacity = (dayTimeKwh + battNight) * 12 / 365;
-    panelsRaw = (savingsFactorOrPanels * dailyCapacity * 1000) / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
+    panelsRaw = (savingsFactor * dailyCapacity * 1000) / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
   } else {
     // No-battery starter: size so that (production × dayTimePct) = savingsFactor × totalConsumption
     // i.e. system produces enough during the day to cover the target % of the full bill
     const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
-    const neededMonthlyProduction = (savingsFactorOrPanels * monthlyConsumptionKwh) / dayTimePct;
+    const neededMonthlyProduction = (savingsFactor * monthlyConsumptionKwh) / dayTimePct;
     panelsRaw = (neededMonthlyProduction / 30) * 1000 / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
   }
-  const panels = isFixedOverride ? savingsFactorOrPanels : snapToFixedPanels(Math.max(8, panelsRaw));
+  const rawCeil = Math.max(8, Math.ceil(panelsRaw));
+  const panels = snapToFixed ? snapToFixedPanels(rawCeil) : rawCeil;
   const kwpSystem = (panels * PANEL_CAPACITY_W) / 1000;
 
   // Actual interest rate — 2% risk premium for systems under 8 panels (ADMIN!C22)
@@ -362,11 +359,10 @@ export function calculate(inputs: CalcInputs): CalcResult {
   // 3 tiers
   // Starter: no battery, snapped to smallest fixed size hitting ≥30% daytime savings
   // Recommended: 1× 5kWh battery, snapped to smallest fixed size hitting ≥50% total savings
-  // Full: always 20 kWp (32 panels) with actual savings shown — custom battery pricing applies
-  const MAX_PANELS = FIXED_PANEL_COUNTS[FIXED_PANEL_COUNTS.length - 1];
+  // Full: exact computed size (no snapping) — custom pricing, shows actual kWp needed for 100% coverage
   const starter = calcSystemTier(0.3, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, false, "Starter System");
   const recommended = calcSystemTier(0.5, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "With Battery");
-  const full = calcSystemTier(MAX_PANELS, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "Full Independence");
+  const full = calcSystemTier(1.0, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "Full Independence", false);
 
   return {
     monthlyConsumptionKwh: Math.round(monthlyConsumptionKwh),
