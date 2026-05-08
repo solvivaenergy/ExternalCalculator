@@ -221,6 +221,15 @@ function calcSystemTier(
   label: string,
   snapToFixed = true
 ): SystemTier {
+  // Battery sizing: scale in 5 kWh increments to cover target portion of nighttime load
+  let batteryKwh = 0;
+  if (withBattery) {
+    const nightConsumptionPerDay = nightTimeKwh / 30;
+    const neededBatteryOutput = savingsFactor * nightConsumptionPerDay;
+    const rawBatteryKwh = neededBatteryOutput / BATTERY_DOD;
+    batteryKwh = Math.max(5, Math.ceil(rawBatteryKwh / 5) * 5);
+  }
+
   // Panel sizing
   let panelsRaw: number;
   if (withBattery) {
@@ -253,10 +262,9 @@ function calcSystemTier(
   const inverterDP = inverter.priceDP;
 
   let batteryTotalDP = 0;
-  let batteryKwh = 0;
   if (withBattery) {
-    batteryKwh = 5; // Standard 5kW Pylontech
-    batteryTotalDP = BATTERY_PACK_DP + BATTERY_RACK_DP + ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
+    const numBatteries = batteryKwh / 5; // each Pylontech pack is 5 kWh
+    batteryTotalDP = numBatteries * (BATTERY_PACK_DP + BATTERY_RACK_DP) + ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
   }
 
   const totalDP = panelsCostDP + mountingDP + cablesDP + laborDP + inverterDP + batteryTotalDP;
