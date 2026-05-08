@@ -71,6 +71,7 @@ const FIXED_OVERHEAD_DP = 19476.15;
 // Fixed available system sizes (panels → kWp) from the proposal generator
 // Rounded labels: 5, 6, 8, 10, 13, 15, 20 kWp
 const FIXED_PANEL_COUNTS = [8, 10, 13, 16, 21, 25, 32] as const;
+const PANEL_KWP_LABEL: Record<number, number> = { 8: 5, 10: 6, 13: 8, 16: 10, 21: 13, 25: 15, 32: 20 };
 
 /** Snap raw panel count up to the next available fixed size */
 function snapToFixedPanels(panelsRaw: number): number {
@@ -130,6 +131,7 @@ export interface CalcInputs {
 export interface SystemTier {
   label: string;
   kwpSystem: number;
+  kwpLabel: number;
   panels: number;
   priceRTO: number;
   priceDP: number;
@@ -324,6 +326,7 @@ function calcSystemTier(
   return {
     label,
     kwpSystem: Math.round(kwpSystem * 100) / 100,
+    kwpLabel: PANEL_KWP_LABEL[panels] ?? Math.round(kwpSystem),
     panels,
     priceRTO: Math.round(totalRTO),
     priceDP: Math.round(totalDP),

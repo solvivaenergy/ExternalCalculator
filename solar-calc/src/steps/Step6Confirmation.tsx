@@ -69,7 +69,7 @@ export default function Step6Confirmation() {
           <div className="flex-1">
             <div className="bg-white border border-neutral-300 rounded p-4 lg:p-6 shadow-xs">
               <p className="text-lg font-semibold text-neutral-800 leading-7">
-                {tier.kwpSystem} kWp System
+                {tier.kwpLabel} kWp System
               </p>
               <p className="text-xs font-medium text-neutral-600 leading-[18px]">
                 {tier.label}
