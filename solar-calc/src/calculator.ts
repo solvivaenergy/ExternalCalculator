@@ -252,12 +252,28 @@ function calcSystemTier(
   const monthlyPaymentRTO = totalRTO / 60;
 
   // Savings
-  // With battery: covers full consumption at the savings factor
+  // With battery: actual production-based formula
+  //   1. Direct daytime use: solar consumed as it's produced (capped by daytime consumption)
+  //   2. Excess solar charges the battery (capped by usable battery capacity)
+  //   3. Battery discharges at night (capped by night consumption)
   // Without battery: system production * dayTimePct (fraction of solar that overlaps with daytime usage),
   //   capped at actual daytime consumption (can't save more than you use during the day)
   let savingsKwh: number;
   if (withBattery) {
-    savingsKwh = monthlyConsumptionKwh * savingsFactor;
+    const solarPerDay = kwpSystem * KWH_PER_KWP_PER_DAY;
+    const dayConsumptionPerDay = dayTimeKwh / 30;
+    const nightConsumptionPerDay = nightTimeKwh / 30;
+
+    const directUsePerDay = Math.min(solarPerDay, dayConsumptionPerDay);
+    const excessSolarPerDay = solarPerDay - directUsePerDay;
+
+    // Battery: charge from excess solar, discharge at night
+    const batteryInputCapacity = batteryKwh * BATTERY_DOD / BATTERY_EFFICIENCY;
+    const batteryInputPerDay = Math.min(excessSolarPerDay, batteryInputCapacity);
+    const batteryOutputPerDay = batteryInputPerDay * BATTERY_EFFICIENCY;
+    const nightSavingsPerDay = Math.min(batteryOutputPerDay, nightConsumptionPerDay);
+
+    savingsKwh = (directUsePerDay + nightSavingsPerDay) * 30;
   } else {
     const monthlyProduction = kwpSystem * KWH_PER_KWP_PER_DAY * 30;
     const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
