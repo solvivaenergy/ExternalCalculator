@@ -25,18 +25,23 @@ export default function Step2HomeDetails() {
 
   const handleNext = () => {
     const bill = parseFloat(formData.electricityBill);
-    if (isNaN(bill) || bill < MIN_BILL_THRESHOLD) {
-      setDisqualifyReason("bill");
-      setStep(-1);
-      return;
-    }
+    const billOk = !isNaN(bill) && bill >= MIN_BILL_THRESHOLD;
+
+    // Condo is always a hard stop (regardless of bill or ownership)
     if (formData.propertyType === "Condo") {
       setDisqualifyReason("condo");
       setStep(-1);
       return;
     }
+    // Renter — DQ reason depends on bill
     if (formData.homeOwnership === "No") {
-      setDisqualifyReason("renter");
+      setDisqualifyReason(billOk ? "renter" : "renter-low-bill");
+      setStep(-1);
+      return;
+    }
+    // Homeowner with low bill — hard stop
+    if (!billOk) {
+      setDisqualifyReason("bill");
       setStep(-1);
       return;
     }

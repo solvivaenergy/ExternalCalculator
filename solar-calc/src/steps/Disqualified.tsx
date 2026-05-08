@@ -3,56 +3,65 @@ import { MIN_BILL_THRESHOLD } from "../calculator";
 import Layout from "../components/Layout";
 import { Button, ButtonFooter } from "../components/ui";
 
-const REASONS = {
+const CONTENT: Record<
+  NonNullable<ReturnType<typeof useWizard>["disqualifyReason"]>,
+  { title: string; description: string }
+> = {
   area: {
     title: "We're not in your area yet",
     description:
       "Solviva is currently available in Metro Manila and nearby provinces (Batangas, Bulacan, Cavite, Laguna, Pampanga, Quezon Province, Rizal).\n\nWant us in your area? Join the waitlist — your interest helps us know where to go next!",
-    primary: "Continue exploring",
-    secondary: "Join waitlist",
   },
   bill: {
     title: "Solar might not be right for you yet",
-    description: `We recommend a monthly bill of at least ₱${MIN_BILL_THRESHOLD.toLocaleString()} to maximize your savings. Below that, it takes too long to break even.\n\nMade a mistake? Re-enter your bill or continue exploring anyway.`,
-    primary: "Continue exploring",
-    secondary: "Re-enter your electricity bill",
+    description: `We recommend a monthly bill of at least ₱${MIN_BILL_THRESHOLD.toLocaleString()} to maximize your savings. Below that, it takes too long to break even.`,
   },
   condo: {
     title: "Condo installations aren't available yet",
     description:
-      "We're not set up to install on condos at this time.\n\nJoin our waitlist to get notified when we can serve condos.",
-    primary: "Continue exploring",
-    secondary: "Join waitlist",
+      "We currently don't serve condo units due to building restrictions and homeowner association requirements.",
   },
   renter: {
     title: "We currently serve homeowners only",
-    description: "",
-    primary: "Continue exploring",
-    secondary: "Join waitlist",
+    description:
+      "Solar installations require homeowner approval. If you own your home, you're good to go!\n\nStill want to see what solar could do for you?",
   },
-} as const;
+  "renter-low-bill": {
+    title: "We currently serve homeowners only",
+    description:
+      "We don't serve renters yet, but we're working on it! Join our waitlist and we'll notify you when we can help.",
+  },
+};
 
 export default function Disqualified() {
   const { disqualifyReason, setStep, setDisqualifyReason } = useWizard();
 
   if (!disqualifyReason) return null;
 
-  const reason = REASONS[disqualifyReason];
+  const { title, description } = CONTENT[disqualifyReason];
 
-  // "Continue exploring" goes to the next step after the one that disqualified
-  const nextStep = disqualifyReason === "area" ? 2 : 3;
+  // Hard stops — no waitlist or continue exploring, just restart
+  const isHardStop =
+    disqualifyReason === "bill" || disqualifyReason === "condo";
 
-  const handlePrimary = () => {
+  // Renter with low bill — only waitlist, no continuing
+  const isWaitlistOnly = disqualifyReason === "renter-low-bill";
+
+  // "Continue exploring" destination
+  const continueStep = disqualifyReason === "area" ? 2 : 3;
+
+  const handleContinue = () => {
     setDisqualifyReason(null);
-    setStep(nextStep);
+    setStep(continueStep);
   };
 
-  const handleSecondary = () => {
-    if (disqualifyReason === "bill") {
-      setDisqualifyReason(null);
-      setStep(2);
-    }
-    // For area/condo/renter "Join waitlist" — no-op for now
+  const handleJoinWaitlist = () => {
+    setStep(8);
+  };
+
+  const handleStartOver = () => {
+    setDisqualifyReason(null);
+    setStep(1);
   };
 
   return (
@@ -68,21 +77,35 @@ export default function Disqualified() {
         </div>
 
         <h2 className="text-2xl font-semibold text-brand-blue leading-[30px]">
-          {reason.title}
+          {title}
         </h2>
 
-        {reason.description && (
+        {description && (
           <p className="text-sm font-medium text-neutral-800 leading-5 whitespace-pre-line">
-            {reason.description}
+            {description}
           </p>
         )}
 
-        <ButtonFooter>
-          <Button variant="secondary" onClick={handleSecondary}>
-            {reason.secondary}
-          </Button>
-          <Button onClick={handlePrimary}>{reason.primary}</Button>
-        </ButtonFooter>
+        {isHardStop && (
+          <ButtonFooter>
+            <Button onClick={handleStartOver}>Start over</Button>
+          </ButtonFooter>
+        )}
+
+        {isWaitlistOnly && (
+          <ButtonFooter>
+            <Button onClick={handleJoinWaitlist}>Join waitlist</Button>
+          </ButtonFooter>
+        )}
+
+        {!isHardStop && !isWaitlistOnly && (
+          <ButtonFooter>
+            <Button variant="secondary" onClick={handleJoinWaitlist}>
+              Join waitlist
+            </Button>
+            <Button onClick={handleContinue}>Continue exploring</Button>
+          </ButtonFooter>
+        )}
       </div>
     </Layout>
   );

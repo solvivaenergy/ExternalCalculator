@@ -37,7 +37,13 @@ const DEFAULT_FORM: FormData = {
   mobile: "",
 };
 
-export type DisqualifyReason = "area" | "bill" | "condo" | "renter" | null;
+export type DisqualifyReason =
+  | "area"
+  | "bill"
+  | "condo"
+  | "renter"
+  | "renter-low-bill"
+  | null;
 
 interface WizardContextType {
   step: number;
