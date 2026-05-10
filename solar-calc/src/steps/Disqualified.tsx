@@ -58,7 +58,7 @@ export default function Disqualified() {
   };
 
   return (
-    <Layout heroSrc={`${import.meta.env.BASE_URL}hero-dq.jpg`}>
+    <Layout heroSrc={`${import.meta.env.BASE_URL}hero-dq.jpg`} hideMobileLogo>
       <div className="flex flex-col gap-[10px] flex-1">
         {/* Hero image (mobile only) */}
         <div className="lg:hidden -mx-8 -mt-2">
@@ -66,6 +66,15 @@ export default function Disqualified() {
             src={`${import.meta.env.BASE_URL}hero-dq.jpg`}
             alt=""
             className="h-[237px] w-full object-cover"
+          />
+        </div>
+
+        {/* Logo below hero on mobile */}
+        <div className="flex justify-center pt-4 pb-2 lg:hidden">
+          <img
+            src={`${import.meta.env.BASE_URL}logo.webp`}
+            alt="Solviva"
+            className="h-12 w-auto"
           />
         </div>
 
