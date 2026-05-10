@@ -36,8 +36,19 @@ export default {
       return handleLogin(request, env, url);
     }
 
-    // ── Block direct access to the internal login endpoint via GET ─────────
-    // (Prevents anyone from directly navigating here to probe)
+    // ── Redirect authenticated users away from the login page ──────────────
+    // Without this, an authenticated user hitting GET /_login gets proxied to
+    // GitHub Pages which has no such file → 404.
+    if (url.pathname === LOGIN_PATH) {
+      if (await isAuthenticated(request, env)) {
+        const raw = url.searchParams.get("next") ?? "";
+        const safe =
+          raw.startsWith(CALC_PREFIX) && !/\/\/|@/.test(raw)
+            ? raw
+            : CALC_PREFIX + "/";
+        return Response.redirect(safe, 302);
+      }
+    }
 
     // ── Auth check ────────────────────────────────────────────────────────
     if (!(await isAuthenticated(request, env))) {
