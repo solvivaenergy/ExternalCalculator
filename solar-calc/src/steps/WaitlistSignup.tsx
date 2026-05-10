@@ -7,17 +7,17 @@ import { TextInput, Button, ButtonFooter } from "../components/ui";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.com$/i;
 const MOBILE_RE = /^\d{10}$/;
 
-const WAITLIST_DESCRIPTION: Partial<Record<NonNullable<DisqualifyReason>, string>> = {
+const WAITLIST_DESCRIPTION: Partial<
+  Record<NonNullable<DisqualifyReason>, string>
+> = {
   condo:
     "Interested in knowing when we can cater to condo owners? Let us know the best way to reach you, and we'll update you as soon as we're available.",
-  bill:
-    "We'll begin to offer smaller system sizes soon — join the waitlist and we'll let you know when they're available!",
+  bill: "We'll begin to offer smaller system sizes soon — join the waitlist and we'll let you know when they're available!",
   renter:
-    "Planning to buy a home soon? Join our waitlist to get updates when you're ready.",
+    "Interested in knowing when we can cater to home renters? Let us know the best way to reach you, and we'll update you as soon as we're available.",
   "renter-low-bill":
-    "Planning to buy a home soon? Join our waitlist to get updates when you're ready.",
-  area:
-    "Want us in your area? Join the waitlist — your interest helps us know where to go next!",
+    "Interested in knowing when we can cater to home renters? Let us know the best way to reach you, and we'll update you as soon as we're available.",
+  area: "Want us in your area? Join the waitlist — your interest helps us know where to go next!",
 };
 
 export default function WaitlistSignup() {
