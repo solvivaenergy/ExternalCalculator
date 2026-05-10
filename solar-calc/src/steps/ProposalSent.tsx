@@ -46,7 +46,7 @@ export default function ProposalSent() {
               <CheckIcon />
               <div className="text-center">
                 <p className="text-2xl font-semibold text-brand-dark-green-2 leading-8">
-                  Proposal Sent
+                  Inquiry Sent
                 </p>
                 <p className="text-lg font-medium text-neutral-800 leading-7">
                   Please check your inbox.
@@ -62,7 +62,7 @@ export default function ProposalSent() {
                   What's included in the email:
                 </p>
                 <ul className="list-disc pl-5 text-sm font-normal text-neutral-800 leading-5 space-y-0.5">
-                  <li>Your personalized Solar Proposal</li>
+                  <li>Your available package options</li>
                   <li>Our team's contact information</li>
                 </ul>
               </div>
@@ -73,8 +73,8 @@ export default function ProposalSent() {
                   What's next?
                 </p>
                 <p className="text-base font-normal text-neutral-800 leading-6">
-                  Our solar experts will reach out within 24-48 hours to guide
-                  you through next steps
+                  Want full energy independence? Our team can build you a custom
+                  package based on your energy needs.
                 </p>
               </div>
 
@@ -101,9 +101,9 @@ export default function ProposalSent() {
                 <button
                   type="button"
                   onClick={() => {
-                    window.location.href = import.meta.env.BASE_URL || "/";
+                    window.location.href = "https://www.solvivaenergy.com/calculator/";
                   }}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-neutral-200 px-6 py-3 text-sm font-bold text-neutral-600 hover:bg-neutral-300 transition-colors cursor-pointer"
+                  className="w-full text-sm font-medium text-neutral-600 py-1 hover:underline transition cursor-pointer"
                 >
                   Submit another inquiry
                 </button>
