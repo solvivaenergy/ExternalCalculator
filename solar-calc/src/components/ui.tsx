@@ -338,10 +338,18 @@ export function RadioGroup({
 }
 
 /* ── Button Footer (pushes to bottom with mt-auto) ── */
-export function ButtonFooter({ children }: { children: ReactNode }) {
+export function ButtonFooter({
+  children,
+  stack,
+}: {
+  children: ReactNode;
+  stack?: boolean;
+}) {
   return (
     <div className="pt-6">
-      <div className="flex gap-4">{children}</div>
+      <div className={`flex gap-4 ${stack ? "flex-col lg:flex-row" : ""}`}>
+        {children}
+      </div>
     </div>
   );
 }

@@ -24,12 +24,12 @@ const CONTENT: Record<
   renter: {
     title: "We currently serve homeowners only",
     description:
-      "Solar panels require permanent installation, so we need property owners who can make long-term modifications. Planning to buy a home soon? Join our waitlist to get updates when you're ready.",
+      "Solar panels require permanent installation, so we need property owners who can make long-term modifications.\n\nPlanning to buy a home soon?\n\nJoin our waitlist to get updates when you're ready.",
   },
   "renter-low-bill": {
     title: "We currently serve homeowners only",
     description:
-      "Solar panels require permanent installation, so we need property owners who can make long-term modifications. Planning to buy a home soon? Join our waitlist to get updates when you're ready.",
+      "Solar panels require permanent installation, so we need property owners who can make long-term modifications.\n\nPlanning to buy a home soon?\n\nJoin our waitlist to get updates when you're ready.",
   },
 };
 
@@ -58,7 +58,7 @@ export default function Disqualified() {
   };
 
   return (
-    <Layout heroSrc={`${import.meta.env.BASE_URL}hero-dq.jpg`} hideMobileLogo>
+    <Layout heroSrc={`${import.meta.env.BASE_URL}hero-dq.jpg`}>
       <div className="flex flex-col gap-[10px] flex-1">
         {/* Hero image (mobile only) */}
         <div className="lg:hidden -mx-8 -mt-2">
@@ -74,19 +74,23 @@ export default function Disqualified() {
         </h2>
 
         {description && (
-          <p className="text-sm font-medium text-neutral-800 leading-5 whitespace-pre-line">
-            {description}
-          </p>
+          <div className="text-sm font-medium text-neutral-800 leading-5">
+            {description.split("\n\n").map((para, i, arr) => (
+              <p key={i} className={i < arr.length - 1 ? "mb-[14px]" : ""}>
+                {para}
+              </p>
+            ))}
+          </div>
         )}
 
         {disqualifyReason === "condo" && (
-          <ButtonFooter>
+          <ButtonFooter stack>
             <Button onClick={handleJoinWaitlist}>Join waitlist</Button>
           </ButtonFooter>
         )}
 
         {disqualifyReason === "bill" && (
-          <ButtonFooter>
+          <ButtonFooter stack>
             <Button variant="secondary" onClick={handleJoinWaitlist}>
               Join waitlist
             </Button>
@@ -97,16 +101,16 @@ export default function Disqualified() {
         )}
 
         {disqualifyReason === "renter-low-bill" && (
-          <ButtonFooter>
-            <Button variant="secondary" onClick={handleGoBack}>
-              Go back
+          <ButtonFooter stack>
+            <Button variant="secondary" onClick={handleJoinWaitlist}>
+              Join waitlist
             </Button>
-            <Button onClick={handleJoinWaitlist}>Join waitlist</Button>
+            <Button onClick={handleGoBack}>Go back</Button>
           </ButtonFooter>
         )}
 
         {disqualifyReason === "renter" && (
-          <ButtonFooter>
+          <ButtonFooter stack>
             <Button variant="secondary" onClick={handleGoBack}>
               Go back
             </Button>
@@ -115,7 +119,7 @@ export default function Disqualified() {
         )}
 
         {disqualifyReason === "area" && (
-          <ButtonFooter>
+          <ButtonFooter stack>
             <Button variant="secondary" onClick={handleJoinWaitlist}>
               Join waitlist
             </Button>
