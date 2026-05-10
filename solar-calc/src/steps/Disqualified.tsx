@@ -120,10 +120,10 @@ export default function Disqualified() {
 
         {disqualifyReason === "renter" && (
           <ButtonFooter stack>
-            <Button variant="secondary" onClick={handleGoBack}>
-              Go back
+            <Button variant="secondary" onClick={handleJoinWaitlist}>
+              Join waitlist
             </Button>
-            <Button onClick={handleContinue}>Continue exploring</Button>
+            <Button onClick={handleGoBack}>Go back</Button>
           </ButtonFooter>
         )}
 
