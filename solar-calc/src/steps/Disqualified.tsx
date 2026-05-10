@@ -14,22 +14,22 @@ const CONTENT: Record<
   },
   bill: {
     title: "Solar might not be right for you yet",
-    description: `We recommend a monthly bill of at least ₱${MIN_BILL_THRESHOLD.toLocaleString()} to maximize your savings. Below that, it takes too long to break even.`,
+    description: `Our current system sizes work best with a monthly bill of at least ₱${MIN_BILL_THRESHOLD.toLocaleString()} to maximize your savings. Below that, it takes too long to break even.\n\nWe'll begin to offer smaller system sizes soon — join the waitlist and we'll let you know when they're available!`,
   },
   condo: {
     title: "Condo installations aren't available yet",
     description:
-      "We currently don't serve condo units due to building restrictions and homeowner association requirements.",
+      "We're not set up to install on condos at this time. Join our waitlist to get notified when we can serve condos.",
   },
   renter: {
     title: "We currently serve homeowners only",
     description:
-      "Solar installations require homeowner approval. If you own your home, you're good to go!\n\nStill want to see what solar could do for you?",
+      "Solar panels require permanent installation, so we need property owners who can make long-term modifications. Planning to buy a home soon? Join our waitlist to get updates when you're ready.",
   },
   "renter-low-bill": {
     title: "We currently serve homeowners only",
     description:
-      "We don't serve renters yet, but we're working on it! Join our waitlist and we'll notify you when we can help.",
+      "Solar panels require permanent installation, so we need property owners who can make long-term modifications. Planning to buy a home soon? Join our waitlist to get updates when you're ready.",
   },
 };
 
@@ -39,13 +39,6 @@ export default function Disqualified() {
   if (!disqualifyReason) return null;
 
   const { title, description } = CONTENT[disqualifyReason];
-
-  // Hard stops — no waitlist or continue exploring, just restart
-  const isHardStop =
-    disqualifyReason === "bill" || disqualifyReason === "condo";
-
-  // Renter with low bill — only waitlist, no continuing
-  const isWaitlistOnly = disqualifyReason === "renter-low-bill";
 
   // "Continue exploring" destination
   const continueStep = disqualifyReason === "area" ? 2 : 3;
@@ -59,9 +52,9 @@ export default function Disqualified() {
     setStep(8);
   };
 
-  const handleStartOver = () => {
+  const handleGoBack = () => {
     setDisqualifyReason(null);
-    setStep(1);
+    setStep(2);
   };
 
   return (
@@ -86,19 +79,42 @@ export default function Disqualified() {
           </p>
         )}
 
-        {isHardStop && (
-          <ButtonFooter>
-            <Button onClick={handleStartOver}>Start over</Button>
-          </ButtonFooter>
-        )}
-
-        {isWaitlistOnly && (
+        {disqualifyReason === "condo" && (
           <ButtonFooter>
             <Button onClick={handleJoinWaitlist}>Join waitlist</Button>
           </ButtonFooter>
         )}
 
-        {!isHardStop && !isWaitlistOnly && (
+        {disqualifyReason === "bill" && (
+          <ButtonFooter>
+            <Button variant="secondary" onClick={handleJoinWaitlist}>
+              Join waitlist
+            </Button>
+            <Button onClick={handleGoBack}>
+              Re-enter your electricity bill
+            </Button>
+          </ButtonFooter>
+        )}
+
+        {disqualifyReason === "renter-low-bill" && (
+          <ButtonFooter>
+            <Button variant="secondary" onClick={handleGoBack}>
+              Go back
+            </Button>
+            <Button onClick={handleJoinWaitlist}>Join waitlist</Button>
+          </ButtonFooter>
+        )}
+
+        {disqualifyReason === "renter" && (
+          <ButtonFooter>
+            <Button variant="secondary" onClick={handleGoBack}>
+              Go back
+            </Button>
+            <Button onClick={handleContinue}>Continue exploring</Button>
+          </ButtonFooter>
+        )}
+
+        {disqualifyReason === "area" && (
           <ButtonFooter>
             <Button variant="secondary" onClick={handleJoinWaitlist}>
               Join waitlist
