@@ -42,7 +42,7 @@ export default function WaitlistConfirmation() {
   };
 
   const handleSubmitAnother = () => {
-    window.location.href = "https://www.solvivaenergy.com";
+    window.location.href = "https://www.solvivaenergy.com/calculator/";
   };
 
   return (
