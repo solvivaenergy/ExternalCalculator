@@ -1,4 +1,16 @@
 import { useWizard } from "../context/WizardContext";
+import type { DisqualifyReason } from "../context/WizardContext";
+
+const CONFIRMATION_SUBTITLE: Partial<
+  Record<NonNullable<DisqualifyReason>, string>
+> = {
+  condo:
+    "We'll reach out as soon as Solviva becomes available for condo owners.",
+  bill: "We'll reach out as soon as we offer smaller system sizes.",
+  renter: "We'll reach out as soon as we can serve renters.",
+  "renter-low-bill": "We'll reach out as soon as we can serve renters.",
+  area: "We'll reach out as soon as we expand to your area.",
+};
 
 function CheckIcon() {
   return (
@@ -19,11 +31,19 @@ function CheckIcon() {
 }
 
 export default function WaitlistConfirmation() {
-  const { setStep, setDisqualifyReason } = useWizard();
+  const { setStep, setDisqualifyReason, disqualifyReason } = useWizard();
 
-  const handleStartOver = () => {
+  const subtitle =
+    (disqualifyReason && CONFIRMATION_SUBTITLE[disqualifyReason]) ??
+    "We'll notify you as soon as we can serve you.";
+
+  const handleGoToWebsite = () => {
+    window.location.href = "https://www.solvivaenergy.com";
+  };
+
+  const handleSubmitAnother = () => {
     setDisqualifyReason(null);
-    setStep(1);
+    setStep(8);
   };
 
   return (
@@ -57,32 +77,25 @@ export default function WaitlistConfirmation() {
                 <p className="text-2xl font-semibold text-brand-dark-green-2 leading-8">
                   You're on the list!
                 </p>
-                <p className="text-sm text-neutral-600 mt-1">
-                  We'll notify you as soon as we can serve you.
-                </p>
+                <p className="text-sm text-neutral-600 mt-1">{subtitle}</p>
               </div>
             </div>
 
-            {/* Body */}
-            <div className="flex flex-col gap-3 text-sm text-neutral-700 leading-6">
-              <p>
-                Thank you for your interest in solar with Solviva. We're growing
-                fast — we'll reach out the moment we expand to your area or
-                situation.
-              </p>
-              <p>
-                In the meantime, follow us on social media for updates and solar
-                tips!
-              </p>
+            {/* CTAs */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleGoToWebsite}
+                className="w-full rounded-lg bg-brand-lime text-brand-dark-green font-bold py-2.5 text-sm hover:opacity-90 transition shadow-xs"
+              >
+                Go to website
+              </button>
+              <button
+                onClick={handleSubmitAnother}
+                className="w-full text-sm text-neutral-600 font-medium py-1 hover:underline transition"
+              >
+                Submit another inquiry
+              </button>
             </div>
-
-            {/* CTA */}
-            <button
-              onClick={handleStartOver}
-              className="w-full rounded-full bg-brand-lime text-brand-dark-green font-semibold py-3 text-sm hover:opacity-90 transition"
-            >
-              Back to calculator
-            </button>
           </div>
         </div>
       </div>
