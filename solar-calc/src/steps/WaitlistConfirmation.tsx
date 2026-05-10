@@ -31,7 +31,7 @@ function CheckIcon() {
 }
 
 export default function WaitlistConfirmation() {
-  const { setStep, setDisqualifyReason, disqualifyReason } = useWizard();
+  const { disqualifyReason } = useWizard();
 
   const subtitle =
     (disqualifyReason && CONFIRMATION_SUBTITLE[disqualifyReason]) ??
@@ -42,8 +42,7 @@ export default function WaitlistConfirmation() {
   };
 
   const handleSubmitAnother = () => {
-    setDisqualifyReason(null);
-    setStep(8);
+    window.location.href = "https://www.solvivaenergy.com";
   };
 
   return (
