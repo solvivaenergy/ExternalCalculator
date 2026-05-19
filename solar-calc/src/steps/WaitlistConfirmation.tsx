@@ -86,13 +86,13 @@ export default function WaitlistConfirmation() {
             <div className="flex flex-col gap-3">
               <button
                 onClick={handleGoToWebsite}
-                className="w-full rounded-lg bg-brand-lime text-brand-dark-green font-bold py-2.5 text-sm hover:opacity-90 transition shadow-xs"
+                className="w-full rounded-lg bg-brand-lime text-brand-dark-green font-bold py-2.5 text-sm hover:opacity-90 transition shadow-xs cursor-pointer"
               >
                 Go to website
               </button>
               <button
                 onClick={handleSubmitAnother}
-                className="w-full text-sm text-neutral-600 font-medium py-1 hover:underline transition"
+                className="w-full text-sm text-neutral-600 font-medium py-1 hover:underline transition cursor-pointer"
               >
                 Submit another inquiry
               </button>
