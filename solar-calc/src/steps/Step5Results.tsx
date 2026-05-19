@@ -66,7 +66,7 @@ function InfoIcon() {
 function LockIcon() {
   return (
     <svg
-      className="w-6 h-6 text-neutral-600"
+      className="w-6 h-6 text-brand-blue"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -256,7 +256,7 @@ function LockedTierCard({
       {/* Custom pricing CTA */}
       <div className="mt-4 relative z-10">
         <Button variant="outline" onClick={onRequestCustomPricing}>
-          Get Custom Pricing
+          Send an Inquiry
         </Button>
       </div>
     </div>
