@@ -215,42 +215,45 @@ function LockedTierCard({
           Full energy independence
         </p>
       </div>
-      <div className="blur-[4px] mt-6 flex flex-col gap-4">
-        <div>
-          <p className="text-base font-medium text-neutral-800 leading-6">
-            ₱---,---
-          </p>
-          <p className="text-xs font-medium text-neutral-600 leading-[18px]">
-            Price
-          </p>
+      {/* Blurred content + lock overlay scoped to this area */}
+      <div className="relative mt-6">
+        <div className="blur-[4px] flex flex-col gap-4">
+          <div>
+            <p className="text-base font-medium text-neutral-800 leading-6">
+              ₱---,---
+            </p>
+            <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+              Price
+            </p>
+          </div>
+          <div>
+            <p className="text-base font-medium text-neutral-800 leading-6">
+              ₱---/month
+            </p>
+            <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+              Est. monthly savings
+            </p>
+            <span className="inline-flex mt-1 bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full leading-[18px]">
+              -100% of your average electricity bill
+            </span>
+          </div>
+          <div>
+            <p className="text-base font-medium text-neutral-800 leading-6">
+              10-15kWh
+            </p>
+            <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+              Included Battery
+            </p>
+          </div>
         </div>
-        <div>
-          <p className="text-base font-medium text-neutral-800 leading-6">
-            ₱---/month
-          </p>
-          <p className="text-xs font-medium text-neutral-600 leading-[18px]">
-            Est. monthly savings
-          </p>
-          <span className="inline-flex mt-1 bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5 rounded-full leading-[18px]">
-            -100% of your average electricity bill
-          </span>
-        </div>
-        <div>
-          <p className="text-base font-medium text-neutral-800 leading-6">
-            10-15kWh
-          </p>
-          <p className="text-xs font-medium text-neutral-600 leading-[18px]">
-            Included Battery
-          </p>
-        </div>
-      </div>
-      {/* Lock overlay */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="bg-white p-2 flex flex-col items-center gap-2 mt-12">
-          <LockIcon />
-          <p className="text-sm font-medium text-neutral-800 leading-5 text-center">
-            Custom Pricing
-          </p>
+        {/* Lock overlay — centered over the blurred rows */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-2">
+            <LockIcon />
+            <p className="text-sm font-medium text-neutral-800 leading-5 text-center">
+              Custom Pricing
+            </p>
+          </div>
         </div>
       </div>
       {/* Custom pricing CTA */}
