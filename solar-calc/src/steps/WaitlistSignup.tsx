@@ -17,7 +17,7 @@ const WAITLIST_DESCRIPTION: Partial<
     "Interested in knowing when we can cater to home renters? Let us know the best way to reach you, and we'll update you as soon as we're available.",
   "renter-low-bill":
     "Interested in knowing when we can cater to home renters? Let us know the best way to reach you, and we'll update you as soon as we're available.",
-  area: "Want us in your area? Join the waitlist — your interest helps us know where to go next!",
+  area: "Interested in knowing when we can cater to your area? Let us know the best way to reach you, and we'll update you as soon as we're available.",
 };
 
 export default function WaitlistSignup() {
@@ -128,7 +128,12 @@ export default function WaitlistSignup() {
             <span className="text-sm font-normal text-neutral-700 leading-5">
               I consent to Solviva Energy collecting and processing my data in
               line with its{" "}
-              <a href="https://www.solvivaenergy.com/policies/privacy" target="_blank" rel="noopener noreferrer" className="underline hover:text-neutral-900">
+              <a
+                href="https://www.solvivaenergy.com/policies/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-neutral-900"
+              >
                 Privacy Policy
               </a>
               , for contacting me about solar services and sending updates via

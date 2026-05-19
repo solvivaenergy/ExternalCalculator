@@ -62,9 +62,7 @@ export default function SolarEstimateSent() {
                   What's included in the email:
                 </p>
                 <ul className="list-disc pl-5 text-sm font-normal text-neutral-800 leading-5 space-y-0.5">
-                  <li>Your personalized solar estimate</li>
-                  <li>System size and pricing details</li>
-                  <li>Estimated monthly savings</li>
+                  <li>Your personalized Solar Estimate</li>
                   <li>Our team's contact information</li>
                 </ul>
               </div>
@@ -75,8 +73,7 @@ export default function SolarEstimateSent() {
                   What's next?
                 </p>
                 <p className="text-base font-normal text-neutral-800 leading-6">
-                  Our team will review your estimate and reach out to confirm
-                  the details and schedule your site assessment.
+                  Our solar experts will reach out within 24-48 hours to guide you through next steps.
                 </p>
               </div>
 

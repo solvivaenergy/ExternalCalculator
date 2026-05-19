@@ -11,7 +11,7 @@ const CONFIRMATION_SUBTITLE: Partial<
     "We'll reach out as soon as Solviva becomes available for home renters.",
   "renter-low-bill":
     "We'll reach out as soon as Solviva becomes available for home renters.",
-  area: "We'll reach out as soon as we expand to your area.",
+  area: "We'll reach out as soon as Solviva becomes available in your area.",
 };
 
 function CheckIcon() {
