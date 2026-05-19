@@ -27,7 +27,11 @@ export default function WaitlistSignup() {
   const isValidEmail = EMAIL_RE.test(formData.email.trim());
   const isValidMobile = MOBILE_RE.test(formData.mobile.trim());
 
-  const canProceed = formData.fullName.trim() && isValidEmail && isValidMobile;
+  const canProceed =
+    formData.fullName.trim() &&
+    isValidEmail &&
+    isValidMobile &&
+    formData.consentGiven;
 
   const handleSubmit = () => {
     setStep(9);
@@ -112,6 +116,26 @@ export default function WaitlistSignup() {
               <span className="text-xs text-red-500">{errors.mobile}</span>
             )}
           </div>
+
+          {/* Consent checkbox */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.consentGiven}
+              onChange={(e) => updateForm({ consentGiven: e.target.checked })}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-300 accent-brand-dark-green-2 cursor-pointer"
+            />
+            <span className="text-sm font-normal text-neutral-700 leading-5">
+              I consent to Solviva Energy collecting and processing my data in
+              line with its{" "}
+              <a href="#" className="underline hover:text-neutral-900">
+                Privacy Policy
+              </a>
+              , for contacting me about solar services and sending updates via
+              Viber, SMS, email, or calls. I understand I may withdraw consent
+              or update my data anytime.
+            </span>
+          </label>
         </div>
 
         <ButtonFooter>

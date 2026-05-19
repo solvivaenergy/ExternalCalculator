@@ -106,9 +106,14 @@ export default function Step4Contact() {
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-300 accent-brand-dark-green-2 cursor-pointer"
             />
             <span className="text-sm font-normal text-neutral-700 leading-5">
-              I consent to Solviva collecting and processing my personal
-              information for the purpose of assessing my solar energy needs and
-              providing me with relevant offers.
+              I consent to Solviva Energy collecting and processing my data in
+              line with its{" "}
+              <a href="#" className="underline hover:text-neutral-900">
+                Privacy Policy
+              </a>
+              , for contacting me about solar services and sending updates via
+              Viber, SMS, email, or calls. I understand I may withdraw consent
+              or update my data anytime.
             </span>
           </label>
         </div>
