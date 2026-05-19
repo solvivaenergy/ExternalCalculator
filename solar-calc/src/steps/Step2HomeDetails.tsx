@@ -55,22 +55,10 @@ export default function Step2HomeDetails() {
 
         {/* Numbered questions */}
         <div className="flex flex-col gap-6">
-          {/* Q1: Property type */}
+          {/* Q1: Electricity bill */}
           <div>
             <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
-              1. What type of property do you have?
-            </p>
-            <SelectInput
-              value={formData.propertyType}
-              onChange={(v) => updateForm({ propertyType: v })}
-              options={PROPERTY_TYPES}
-            />
-          </div>
-
-          {/* Q2: Electricity bill */}
-          <div>
-            <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
-              2. What's your average electricity bill?
+              1. What's your average electricity bill?
             </p>
             <TextInput
               placeholder="10,000"
@@ -79,6 +67,18 @@ export default function Step2HomeDetails() {
               onChange={(v) =>
                 updateForm({ electricityBill: v.replace(/[^0-9.]/g, "") })
               }
+            />
+          </div>
+
+          {/* Q2: Property type */}
+          <div>
+            <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
+              2. What type of property do you have?
+            </p>
+            <SelectInput
+              value={formData.propertyType}
+              onChange={(v) => updateForm({ propertyType: v })}
+              options={PROPERTY_TYPES}
             />
           </div>
 

@@ -73,7 +73,8 @@ export default function SolarEstimateSent() {
                   What's next?
                 </p>
                 <p className="text-base font-normal text-neutral-800 leading-6">
-                  Our solar experts will reach out within 24-48 hours to guide you through next steps.
+                  Our solar experts will reach out within 24-48 hours to guide
+                  you through next steps.
                 </p>
               </div>
 
