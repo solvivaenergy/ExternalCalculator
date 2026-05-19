@@ -27,21 +27,21 @@ export default function Step2HomeDetails() {
     const bill = parseFloat(formData.electricityBill);
     const billOk = !isNaN(bill) && bill >= MIN_BILL_THRESHOLD;
 
-    // Condo is always a hard stop (regardless of bill or ownership)
+    // 1) Condo — hard stop regardless of bill or ownership
     if (formData.propertyType === "Condo") {
       setDisqualifyReason("condo");
       setStep(-1);
       return;
     }
-    // Renter — DQ reason depends on bill
-    if (formData.homeOwnership === "No") {
-      setDisqualifyReason(billOk ? "renter" : "renter-low-bill");
+    // 2) Low bill — hard stop
+    if (!billOk) {
+      setDisqualifyReason("bill");
       setStep(-1);
       return;
     }
-    // Homeowner with low bill — hard stop
-    if (!billOk) {
-      setDisqualifyReason("bill");
+    // 3) Renter — hard stop
+    if (formData.homeOwnership === "No") {
+      setDisqualifyReason("renter");
       setStep(-1);
       return;
     }
@@ -55,10 +55,22 @@ export default function Step2HomeDetails() {
 
         {/* Numbered questions */}
         <div className="flex flex-col gap-6">
-          {/* Q1: Electricity bill */}
+          {/* Q1: Property type */}
           <div>
             <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
-              1. What's your average electricity bill?
+              1. What type of property do you have?
+            </p>
+            <SelectInput
+              value={formData.propertyType}
+              onChange={(v) => updateForm({ propertyType: v })}
+              options={PROPERTY_TYPES}
+            />
+          </div>
+
+          {/* Q2: Electricity bill */}
+          <div>
+            <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
+              2. What's your average electricity bill?
             </p>
             <TextInput
               placeholder="10,000"
@@ -70,10 +82,10 @@ export default function Step2HomeDetails() {
             />
           </div>
 
-          {/* Q2: Home ownership */}
+          {/* Q3: Home ownership */}
           <div>
             <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
-              2. Do you own your home?
+              3. Do you own your home?
             </p>
             <RadioGroup
               value={formData.homeOwnership}
@@ -82,18 +94,6 @@ export default function Step2HomeDetails() {
                 { label: "Yes", value: "Yes" },
                 { label: "No", value: "No" },
               ]}
-            />
-          </div>
-
-          {/* Q3: Property type */}
-          <div>
-            <p className="text-lg font-medium text-neutral-700 leading-7 mb-2">
-              3. What type of property do you have?
-            </p>
-            <SelectInput
-              value={formData.propertyType}
-              onChange={(v) => updateForm({ propertyType: v })}
-              options={PROPERTY_TYPES}
             />
           </div>
 

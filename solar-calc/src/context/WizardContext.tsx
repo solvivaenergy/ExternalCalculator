@@ -23,6 +23,7 @@ export interface FormData {
   fullName: string;
   email: string;
   mobile: string;
+  consentGiven: boolean;
 }
 
 const DEFAULT_FORM: FormData = {
@@ -35,6 +36,7 @@ const DEFAULT_FORM: FormData = {
   fullName: "",
   email: "",
   mobile: "",
+  consentGiven: false,
 };
 
 export type DisqualifyReason =

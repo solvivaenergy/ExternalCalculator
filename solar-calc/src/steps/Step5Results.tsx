@@ -198,7 +198,13 @@ function TierCard({
 }
 
 /* ── Locked tier card ── */
-function LockedTierCard({ tier }: { tier: SystemTier }) {
+function LockedTierCard({
+  tier,
+  onRequestCustomPricing,
+}: {
+  tier: SystemTier;
+  onRequestCustomPricing: () => void;
+}) {
   return (
     <div className="bg-white border border-neutral-300 rounded p-4 shadow-xs relative overflow-hidden">
       <div>
@@ -246,6 +252,12 @@ function LockedTierCard({ tier }: { tier: SystemTier }) {
             Custom Pricing
           </p>
         </div>
+      </div>
+      {/* Custom pricing CTA */}
+      <div className="mt-4 relative z-10">
+        <Button variant="outline" onClick={onRequestCustomPricing}>
+          Get Custom Pricing
+        </Button>
       </div>
     </div>
   );
@@ -373,7 +385,10 @@ export default function Step5Results() {
             recommended
             onViewDetails={() => handleViewDetails(1)}
           />
-          <LockedTierCard tier={result.full} />
+          <LockedTierCard
+            tier={result.full}
+            onRequestCustomPricing={() => setStep(7)}
+          />
         </div>
       </div>
     </Layout>

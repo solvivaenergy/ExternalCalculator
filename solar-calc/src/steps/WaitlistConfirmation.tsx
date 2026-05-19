@@ -7,8 +7,10 @@ const CONFIRMATION_SUBTITLE: Partial<
   condo:
     "We'll reach out as soon as Solviva becomes available for condo owners.",
   bill: "We'll reach out as soon as we offer smaller system sizes.",
-  renter: "We'll reach out as soon as Solviva becomes available for home renters.",
-  "renter-low-bill": "We'll reach out as soon as Solviva becomes available for home renters.",
+  renter:
+    "We'll reach out as soon as Solviva becomes available for home renters.",
+  "renter-low-bill":
+    "We'll reach out as soon as Solviva becomes available for home renters.",
   area: "We'll reach out as soon as we expand to your area.",
 };
 

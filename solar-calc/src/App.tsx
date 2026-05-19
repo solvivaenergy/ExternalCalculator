@@ -6,6 +6,7 @@ import Step4Contact from "./steps/Step4Contact";
 import Step5Results from "./steps/Step5Results";
 import Step6Confirmation from "./steps/Step6Confirmation";
 import ProposalSent from "./steps/ProposalSent";
+import SolarEstimateSent from "./steps/SolarEstimateSent";
 import Disqualified from "./steps/Disqualified";
 import WaitlistSignup from "./steps/WaitlistSignup";
 import WaitlistConfirmation from "./steps/WaitlistConfirmation";
@@ -34,6 +35,8 @@ function WizardRouter() {
       return <WaitlistSignup />;
     case 9:
       return <WaitlistConfirmation />;
+    case 10:
+      return <SolarEstimateSent />;
     default:
       return <Step1Location />;
   }

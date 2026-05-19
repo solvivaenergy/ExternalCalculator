@@ -16,7 +16,7 @@ function CheckIcon() {
   );
 }
 
-export default function ProposalSent() {
+export default function SolarEstimateSent() {
   return (
     <div className="relative min-h-dvh">
       {/* Background hero image */}
@@ -46,7 +46,7 @@ export default function ProposalSent() {
               <CheckIcon />
               <div className="text-center">
                 <p className="text-2xl font-semibold text-brand-dark-green-2 leading-8">
-                  Inquiry Sent
+                  Solar Estimate Sent
                 </p>
                 <p className="text-lg font-medium text-neutral-800 leading-7">
                   Please check your inbox.
@@ -62,7 +62,9 @@ export default function ProposalSent() {
                   What's included in the email:
                 </p>
                 <ul className="list-disc pl-5 text-sm font-normal text-neutral-800 leading-5 space-y-0.5">
-                  <li>Your available package options</li>
+                  <li>Your personalized solar estimate</li>
+                  <li>System size and pricing details</li>
+                  <li>Estimated monthly savings</li>
                   <li>Our team's contact information</li>
                 </ul>
               </div>
@@ -73,8 +75,8 @@ export default function ProposalSent() {
                   What's next?
                 </p>
                 <p className="text-base font-normal text-neutral-800 leading-6">
-                  Want full energy independence? Our team can build you a custom
-                  package based on your energy needs.
+                  Our team will review your estimate and reach out to confirm
+                  the details and schedule your site assessment.
                 </p>
               </div>
 
@@ -88,16 +90,14 @@ export default function ProposalSent() {
                 </p>
               </div>
 
-              {/* Buttons with reduced gap */}
+              {/* Buttons */}
               <div className="flex flex-col gap-4">
-                {/* Visit website */}
                 <a
                   href="https://www.solvivaenergy.com"
                   className="w-full inline-flex items-center justify-center rounded-lg bg-brand-lime px-6 py-3 text-sm font-bold text-brand-dark-green hover:brightness-95 transition-colors"
                 >
                   Go to website
                 </a>
-                {/* Submit another inquiry */}
                 <button
                   type="button"
                   onClick={() => {

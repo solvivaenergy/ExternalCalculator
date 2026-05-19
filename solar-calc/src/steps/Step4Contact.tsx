@@ -14,7 +14,11 @@ export default function Step4Contact() {
   const isValidEmail = EMAIL_RE.test(formData.email.trim());
   const isValidMobile = MOBILE_RE.test(formData.mobile.trim());
 
-  const canProceed = formData.fullName.trim() && isValidEmail && isValidMobile;
+  const canProceed =
+    formData.fullName.trim() &&
+    isValidEmail &&
+    isValidMobile &&
+    formData.consentGiven;
 
   const handleSubmit = () => {
     const bill = parseFloat(formData.electricityBill);
@@ -92,6 +96,21 @@ export default function Step4Contact() {
               <span className="text-xs text-red-500">{errors.mobile}</span>
             )}
           </div>
+
+          {/* Consent checkbox */}
+          <label className="flex items-start gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={formData.consentGiven}
+              onChange={(e) => updateForm({ consentGiven: e.target.checked })}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-neutral-300 accent-brand-dark-green-2 cursor-pointer"
+            />
+            <span className="text-sm font-normal text-neutral-700 leading-5">
+              I consent to Solviva collecting and processing my personal
+              information for the purpose of assessing my solar energy needs and
+              providing me with relevant offers.
+            </span>
+          </label>
         </div>
 
         <ButtonFooter>
