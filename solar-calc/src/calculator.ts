@@ -21,52 +21,53 @@ export const DEVICES = [
 
 export type DeviceName = (typeof DEVICES)[number]["name"];
 
-// Constants from ADMIN sheet
-const PANEL_CAPACITY_W = 630;
-const KWH_PER_KWP_PER_DAY = 3.6;
-const BASE_RTO_RATE = 0.28;
-const RISK_PREMIUM_RATE = 0.30; // <8 panels — from ADMIN!C19 + C21/10000
-const RISK_PREMIUM_PANELS = 8;  // ADMIN!C20
-const BATTERY_EFFICIENCY = 0.98;
-const BATTERY_DOD = 0.95;
-const PANEL_DEGRADATION = 0.005; // per year
-// const MAINTENANCE_INFLATION = 0.03;
-// const NET_METERING_EFFICIENCY = 0.5;
+// Constants from ADMIN sheet (aligned with solvivacalc-handoff-v3-59 / v3.2 Excel)
+const PANEL_CAPACITY_W = 630;                // Inventory C3
+const KWH_PER_KWP_PER_DAY = 3.6;            // Admin C125
+const BASE_RTO_RATE = 0.28;                  // Admin C22
+const RISK_PREMIUM_RATE = 0.32;              // Admin C22 + C24 (28% + 400bps)
+const RISK_PREMIUM_PANELS = 8;               // Admin C23
+const BATTERY_EFFICIENCY = 0.92;             // Admin C126
+const BATTERY_DOD = 0.95;                    // Admin C127
+const PANEL_DEGRADATION = 0.005;             // Admin C128
 
-// Pricing per panel
-const PRICE_PER_PANEL_DP = 7745.23;
-const MIN_MOUNTING_SUPPORT_DP = 6461.54;
-const MOUNTING_PCT = 0.16;
+// Pricing per panel (v3.2 direct prices — Inventory D3)
+const PRICE_PER_PANEL_DP = 8600;
+const MIN_MOUNTING_SUPPORT_DP = 8579;        // Admin D32
+const MOUNTING_PCT = 0.13;                   // Admin C33
 const CABLE_PCT_TABLE = [
-  { panels: 1, total: 0.69 },
-  { panels: 8, total: 0.69 },
-  { panels: 10, total: 0.66 },
-  { panels: 13, total: 0.66 },
-  { panels: 16, total: 0.58 },
-  { panels: 19, total: 0.51 },
-  { panels: 24, total: 0.40 },
-  { panels: 31, total: 0.39 },
+  // Admin B36:G48 — dcCablePct + acCablePct + conduitsPct + panelBoardPct
+  { panels: 1,   total: 0.56 },  // 0.27+0.08+0.12+0.09
+  { panels: 8,   total: 0.56 },  // 0.27+0.08+0.12+0.09
+  { panels: 10,  total: 0.52 },  // 0.27+0.07+0.10+0.08
+  { panels: 13,  total: 0.51 },  // 0.27+0.06+0.10+0.08
+  { panels: 16,  total: 0.45 },  // 0.22+0.06+0.10+0.07
+  { panels: 19,  total: 0.40 },  // 0.19+0.06+0.09+0.06
+  { panels: 24,  total: 0.32 },  // 0.15+0.05+0.07+0.05
+  { panels: 31,  total: 0.29 },  // 0.13+0.05+0.07+0.04
 ];
 
-// Inverter lookup (kWp → inverter)
+// Inverter lookup (kWp → inverter) — Inventory single-phase prices
 const INVERTERS = [
-  { minKwp: 0.01, name: "5.00 kW Inverter", ratedKw: 5, priceDP: 66338.46 },
-  { minKwp: 5, name: "6.00 kW Inverter", ratedKw: 6, priceDP: 74953.85 },
-  { minKwp: 6, name: "8.00 kW Inverter", ratedKw: 8, priceDP: 99076.92 },
-  { minKwp: 8, name: "12.00 kW Inverter", ratedKw: 12, priceDP: 138707.69 },
-  { minKwp: 12, name: "16.00 kW Inverter", ratedKw: 16, priceDP: 188676.92 },
+  { minKwp: 0.01, name: "5.00 kW Inverter", ratedKw: 5,  priceDP: 58384  },
+  { minKwp: 5,    name: "6.00 kW Inverter", ratedKw: 6,  priceDP: 65967  },
+  { minKwp: 6,    name: "8.00 kW Inverter", ratedKw: 8,  priceDP: 87197  },
+  { minKwp: 8,    name: "12.00 kW Inverter", ratedKw: 12, priceDP: 122076 },
+  { minKwp: 12,   name: "16.00 kW Inverter", ratedKw: 16, priceDP: 166054 },
 ];
 
-// Battery pricing (direct purchase)
-const BATTERY_PACK_DP = 74264.62;
-const BATTERY_RACK_DP = 8615.38;
-const ATS_DP = 10338.46;
-const CRITICAL_LOADS_DP = 3790.77;
-const BATTERY_LABOR_W_SOLAR_DP = 18092.31;
+// Battery pricing — 5 kWh pack (Admin batteryPackages[0])
+const BATTERY_UNIT_KWH = 5;
+const BATTERY_UNIT_DP = 91898;               // per unit
+const BATTERY_RACK_CAPACITY = 3;             // units per rack
+const BATTERY_RACK_DP = 7582;               // per rack
+const ATS_DP = 9099;
+const CRITICAL_LOADS_DP = 3336;
+const BATTERY_LABOR_W_SOLAR_DP = 15923;
 
-// Labor & fixed overhead (direct purchase)
-const SOLAR_LABOR_PER_KWP_DP = 7753.85;
-const FIXED_OVERHEAD_DP = 19476.15;
+// Labor & fixed overhead (direct purchase — Admin D53, D109:D113)
+const SOLAR_LABOR_PER_KWP_DP = 8341;
+const FIXED_OVERHEAD_DP = 2943 + 2066 + 0 + 7582 + 4549; // = 17140
 
 // Fixed available system sizes (panels → kWp) from the proposal generator
 // Rounded labels: 5, 6, 8, 10, 13, 15, 20 kWp
@@ -265,8 +266,11 @@ function calcSystemTier(
 
   let batteryTotalDP = 0;
   if (withBattery) {
-    const numBatteries = batteryKwh / 5; // each Pylontech pack is 5 kWh
-    batteryTotalDP = numBatteries * (BATTERY_PACK_DP + BATTERY_RACK_DP) + ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
+    const numBatteries = Math.ceil(batteryKwh / BATTERY_UNIT_KWH);
+    const numRacks = Math.ceil(numBatteries / BATTERY_RACK_CAPACITY);
+    batteryTotalDP = numBatteries * BATTERY_UNIT_DP
+                   + numRacks * BATTERY_RACK_DP
+                   + ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
   }
 
   const totalDP = panelsCostDP + mountingDP + cablesDP + laborDP + inverterDP + batteryTotalDP;
@@ -282,28 +286,30 @@ function calcSystemTier(
   //   3. Battery discharges at night (capped by night consumption)
   // Without battery: system production * dayTimePct (fraction of solar that overlaps with daytime usage),
   //   capped at actual daytime consumption (can't save more than you use during the day)
+  // Monthly days factor — matches Schedule.js: * 365/12
+  const DAYS_PER_MONTH = 365 / 12;
+
   let savingsKwh: number;
   if (withBattery) {
     const solarPerDay = kwpSystem * KWH_PER_KWP_PER_DAY;
-    const dayConsumptionPerDay = dayTimeKwh / 30;
-    const nightConsumptionPerDay = nightTimeKwh / 30;
+    const dayConsumptionPerDay = dayTimeKwh / DAYS_PER_MONTH;
+    const nightConsumptionPerDay = nightTimeKwh / DAYS_PER_MONTH;
 
     const directUsePerDay = Math.min(solarPerDay, dayConsumptionPerDay);
     const excessSolarPerDay = solarPerDay - directUsePerDay;
 
-    // Battery: charge from excess solar, discharge at night
-    const batteryInputCapacity = batteryKwh * BATTERY_DOD / BATTERY_EFFICIENCY;
-    const batteryInputPerDay = Math.min(excessSolarPerDay, batteryInputCapacity);
-    const batteryOutputPerDay = batteryInputPerDay * BATTERY_EFFICIENCY;
-    const nightSavingsPerDay = Math.min(batteryOutputPerDay, nightConsumptionPerDay);
+    // Battery: usable storage = min(excess, capacity×eff) × DOD  (mirrors Schedule H12)
+    const usableBatteryStorage = Math.min(excessSolarPerDay, batteryKwh * BATTERY_EFFICIENCY) * BATTERY_DOD;
+    const nightSavingsPerDay = Math.min(usableBatteryStorage, nightConsumptionPerDay);
 
-    savingsKwh = (directUsePerDay + nightSavingsPerDay) * 30;
+    savingsKwh = (directUsePerDay + nightSavingsPerDay) * DAYS_PER_MONTH;
   } else {
-    const monthlyProduction = kwpSystem * KWH_PER_KWP_PER_DAY * 30;
+    const monthlyProduction = kwpSystem * KWH_PER_KWP_PER_DAY * DAYS_PER_MONTH;
     const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
     savingsKwh = Math.min(monthlyProduction * dayTimePct, dayTimeKwh);
   }
-  const monthlySavings = electricityRate * savingsKwh;
+  // Round monthly peso savings to nearest ₱100 — matches Schedule J45 ROUND(...,-2)
+  const monthlySavings = Math.round(electricityRate * savingsKwh / 100) * 100;
   const savingsPct = monthlyConsumptionKwh > 0 ? savingsKwh / monthlyConsumptionKwh : 0;
 
   // Payback (simple) — from SCHEDULE X3 formula
