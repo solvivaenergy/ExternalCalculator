@@ -63,7 +63,11 @@ export default function Step2HomeDetails() {
             <TextInput
               placeholder="10,000"
               prefix="₱"
-              value={formData.electricityBill}
+              value={
+                formData.electricityBill !== ""
+                  ? Number(formData.electricityBill).toLocaleString()
+                  : ""
+              }
               onChange={(v) =>
                 updateForm({ electricityBill: v.replace(/[^0-9.]/g, "") })
               }

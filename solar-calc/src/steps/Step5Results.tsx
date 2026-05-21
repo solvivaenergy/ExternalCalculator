@@ -123,7 +123,7 @@ function TierCard({
   onViewDetails: () => void;
 }) {
   return (
-    <div>
+    <div className="flex flex-col h-full">
       {recommended && (
         <div className="bg-brand-blue rounded-t px-2 py-1 flex items-center justify-center">
           <span className="text-xs font-semibold text-brand-lime leading-[18px]">
@@ -132,7 +132,7 @@ function TierCard({
         </div>
       )}
       <div
-        className={`bg-white ${
+        className={`bg-white flex-1 ${
           recommended
             ? "border-2 border-brand-blue rounded-b"
             : "border border-neutral-300 rounded"
@@ -189,9 +189,11 @@ function TierCard({
         </div>
 
         {/* View details */}
-        <Button variant="outline" onClick={onViewDetails}>
-          View details
-        </Button>
+        <div className="mt-auto">
+          <Button variant="outline" onClick={onViewDetails}>
+            View details
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -206,7 +208,7 @@ function LockedTierCard({
   onRequestCustomPricing: () => void;
 }) {
   return (
-    <div className="bg-white border border-neutral-300 rounded p-4 shadow-xs relative overflow-hidden">
+    <div className="bg-white border border-neutral-300 rounded p-4 shadow-xs relative overflow-hidden flex flex-col h-full">
       <div>
         <p className="text-lg font-semibold text-neutral-800 leading-7">
           {tier.kwpLabel} kWp System
@@ -257,7 +259,7 @@ function LockedTierCard({
         </div>
       </div>
       {/* Custom pricing CTA */}
-      <div className="mt-4 relative z-10">
+      <div className="mt-auto relative z-10">
         <Button variant="outline" onClick={onRequestCustomPricing}>
           Send an Inquiry
         </Button>
@@ -355,7 +357,7 @@ export default function Step5Results() {
             type="button"
             className={`py-2 px-6 rounded-full text-sm font-medium leading-5 transition-colors cursor-pointer ${
               purchaseMode === "rto"
-                ? "bg-brand-dark-green-2 text-white"
+                ? "bg-brand-dark-green text-white"
                 : "text-neutral-600"
             }`}
             onClick={() => setPurchaseMode("rto")}
@@ -366,7 +368,7 @@ export default function Step5Results() {
             type="button"
             className={`py-2 px-6 rounded-full text-sm font-medium leading-5 transition-colors cursor-pointer ${
               purchaseMode === "direct"
-                ? "bg-brand-dark-green-2 text-white"
+                ? "bg-brand-dark-green text-white"
                 : "text-neutral-600"
             }`}
             onClick={() => setPurchaseMode("direct")}
