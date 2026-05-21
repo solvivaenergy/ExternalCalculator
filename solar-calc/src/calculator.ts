@@ -358,8 +358,14 @@ export function calculate(inputs: CalcInputs): CalcResult {
   const baseload = monthlyConsumptionKwh - deviceTotalKwh;
 
   // Day/Night split (from CALCULATOR Q28/Q29)
-  const dayTimeKwh = Math.max(0, baseload / 2 + deviceDayKwh);
-  const nightTimeKwh = Math.max(0, baseload / 2 + deviceNightKwh);
+  // Re-normalize so day + night always sum to monthlyConsumptionKwh.
+  // When deviceTotalKwh > monthlyConsumptionKwh, baseload is negative and
+  // asymmetric clamping can push one side above 100%.
+  const rawDayKwh = Math.max(0, baseload / 2 + deviceDayKwh);
+  const rawNightKwh = Math.max(0, baseload / 2 + deviceNightKwh);
+  const rawTotal = rawDayKwh + rawNightKwh;
+  const dayTimeKwh = rawTotal > 0 ? (rawDayKwh / rawTotal) * monthlyConsumptionKwh : monthlyConsumptionKwh / 2;
+  const nightTimeKwh = monthlyConsumptionKwh - dayTimeKwh;
   const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
 
   let usageProfile: string;
