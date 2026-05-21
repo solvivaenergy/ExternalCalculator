@@ -189,7 +189,7 @@ function TierCard({
         </div>
 
         {/* View details */}
-        <div className="mt-auto">
+        <div className="mt-auto flex">
           <Button variant="outline" onClick={onViewDetails}>
             View details
           </Button>
@@ -259,7 +259,7 @@ function LockedTierCard({
         </div>
       </div>
       {/* Custom pricing CTA */}
-      <div className="mt-auto relative z-10">
+      <div className="mt-auto flex relative z-10">
         <Button variant="outline" onClick={onRequestCustomPricing}>
           Send an Inquiry
         </Button>
