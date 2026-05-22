@@ -74,13 +74,16 @@ const FIXED_OVERHEAD_DP = 2943 + 2066 + 0 + 7582 + 4549; // = 17140
 const FIXED_PANEL_COUNTS = [8, 10, 13, 16, 21, 25, 32] as const;
 const PANEL_KWP_LABEL: Record<number, number> = { 8: 5, 10: 6, 13: 8, 16: 10, 21: 13, 25: 15, 32: 20 };
 
-/** Snap raw panel count up to the next available fixed size */
-function snapToFixedPanels(panelsRaw: number): number {
-  for (const fixed of FIXED_PANEL_COUNTS) {
-    if (fixed >= Math.ceil(panelsRaw)) return fixed;
-  }
-  return FIXED_PANEL_COUNTS[FIXED_PANEL_COUNTS.length - 1];
-}
+// Battery sizes to iterate (5 kWh per unit)
+const BATTERY_KWH_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
+
+// ─── Hourly solar radiance ratios (Schedule!A55:A66, B55:B66) ───
+// 12 ratios for hours 6 AM–5 PM, summing to 1.0
+// production[h] = RADIANCE_RATIOS[h-6] × kWhPerKwpPerDay × systemKwp
+const RADIANCE_RATIOS = [
+  0.017, 0.049, 0.078, 0.103, 0.121, 0.132,
+  0.132, 0.121, 0.103, 0.078, 0.049, 0.017,
+] as const;
 
 // ─── Helpers ───
 
@@ -106,6 +109,140 @@ function lookupInverter(kwp: number) {
     if (kwp >= entry.minKwp) inv = entry;
   }
   return inv;
+}
+
+// ─── Hourly load profile ───
+// Returns 24 values (kWh per average day, one per hour) = baseload + devices.
+// Uses the same isOnAtHour logic as Schedule.js: times stored as day-fractions.
+function buildHourlyLoad(devices: DeviceEntry[], dailyBaseloadKwh: number): number[] {
+  const load: number[] = Array(24).fill(0);
+  const basePerHour = dailyBaseloadKwh / 24;
+  for (const device of devices) {
+    const info = DEVICES.find((d) => d.name === device.deviceName);
+    if (!info) continue;
+    const onFrac = hoursTo24(device.onTimeHour, device.onTimeMinute, device.onTimeAmPm) / 24;
+    const offFrac = hoursTo24(device.offTimeHour, device.offTimeMinute, device.offTimeAmPm) / 24;
+    const dwFrac = device.daysPerWeek / 7;
+    for (let h = 0; h < 24; h++) {
+      const t = h / 24;
+      let on: number;
+      if (onFrac === offFrac) {
+        on = 1; // all day
+      } else if (offFrac > onFrac) {
+        on = t >= onFrac && t < offFrac ? 1 : 0;
+      } else {
+        on = t >= onFrac || t < offFrac ? 1 : 0; // wraps midnight
+      }
+      load[h] += on * info.avgPower * dwFrac * device.quantity;
+    }
+  }
+  for (let h = 0; h < 24; h++) load[h] += basePerHour;
+  return load;
+}
+
+// ─── 24-hour energy simulation ───
+// Mirrors Schedule.js buildHourlyCurve, returning:
+//   coverage = (solarUsed + battUsed) / totalLoad  (= Schedule!F51)
+//   dailySavingsKwh = totalLoad - afterBatt          (daily average)
+function runHourlySim(
+  systemKwp: number,
+  batteryKwh: number,
+  hourlyLoad: number[],
+): { coverage: number; dailySavingsKwh: number } {
+  const solarUsed: number[] = Array(24).fill(0);
+  const excessSolar: number[] = Array(24).fill(0);
+  for (let h = 0; h < 24; h++) {
+    const prod =
+      h >= 6 && h <= 17
+        ? RADIANCE_RATIOS[h - 6] * KWH_PER_KWP_PER_DAY * systemKwp
+        : 0;
+    solarUsed[h] = Math.min(hourlyLoad[h], prod);
+    excessSolar[h] = prod - solarUsed[h];
+  }
+  const dailyExcess = excessSolar.reduce((s, v) => s + v, 0);
+  // Schedule H12: usable battery = min(excess, cap×eff) × DOD
+  let battRemaining =
+    Math.min(dailyExcess, batteryKwh * BATTERY_EFFICIENCY) * BATTERY_DOD;
+  let afterBattTotal = 0;
+  for (let h = 0; h < 24; h++) {
+    const uncovered = hourlyLoad[h] - solarUsed[h];
+    const battUsed = Math.min(battRemaining, uncovered);
+    battRemaining -= battUsed;
+    afterBattTotal += uncovered - battUsed;
+  }
+  const totalLoad = hourlyLoad.reduce((s, v) => s + v, 0);
+  const coverage = totalLoad > 0 ? 1 - afterBattTotal / totalLoad : 0;
+  return { coverage, dailySavingsKwh: totalLoad - afterBattTotal };
+}
+
+// ─── Direct-purchase price estimate (for tier cost comparison) ───
+function computeDP(panels: number, batteryKwh: number): number {
+  const kwp = (panels * PANEL_CAPACITY_W) / 1000;
+  const pCost = panels * PRICE_PER_PANEL_DP;
+  const mounting = Math.max(MIN_MOUNTING_SUPPORT_DP, pCost * MOUNTING_PCT);
+  const cables = lookupCablePct(panels) * pCost;
+  const labor = kwp * SOLAR_LABOR_PER_KWP_DP + FIXED_OVERHEAD_DP;
+  const inv = lookupInverter(kwp).priceDP;
+  let battCost = 0;
+  if (batteryKwh > 0) {
+    const n = Math.ceil(batteryKwh / BATTERY_UNIT_KWH);
+    battCost =
+      n * BATTERY_UNIT_DP +
+      Math.ceil(n / BATTERY_RACK_CAPACITY) * BATTERY_RACK_DP +
+      ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
+  }
+  return pCost + mounting + cables + labor + inv + battCost;
+}
+
+// ─── Coverage-based tier size selection ───
+// Returns the (panels, batteryKwh) with minimum cost that achieves
+// targetCoverage using the hourly simulation.
+function selectTierSize(
+  targetCoverage: number,
+  withBattery: boolean,
+  hourlyLoad: number[],
+): { panels: number; batteryKwh: number } {
+  if (!withBattery) {
+    // No battery: iterate fixed kWp sizes and find smallest meeting target
+    for (const panels of FIXED_PANEL_COUNTS) {
+      const kwp = (panels * PANEL_CAPACITY_W) / 1000;
+      if (runHourlySim(kwp, 0, hourlyLoad).coverage >= targetCoverage) {
+        return { panels, batteryKwh: 0 };
+      }
+    }
+    return { panels: FIXED_PANEL_COUNTS[FIXED_PANEL_COUNTS.length - 1], batteryKwh: 0 };
+  }
+  // With battery: for each fixed kWp, find minimum battery kWh meeting target,
+  // then pick the lowest-cost valid (kWp, battery) combination.
+  let best: { panels: number; batteryKwh: number; cost: number } | null = null;
+  for (const panels of FIXED_PANEL_COUNTS) {
+    const kwp = (panels * PANEL_CAPACITY_W) / 1000;
+    for (const batt of BATTERY_KWH_OPTIONS) {
+      if (runHourlySim(kwp, batt, hourlyLoad).coverage >= targetCoverage) {
+        const cost = computeDP(panels, batt);
+        if (!best || cost < best.cost) best = { panels, batteryKwh: batt, cost };
+        break; // minimum battery found for this kWp
+      }
+    }
+  }
+  if (best) return { panels: best.panels, batteryKwh: best.batteryKwh };
+  // Target unachievable — return the combination with highest coverage
+  let bestCov = 0;
+  let fallback = {
+    panels: FIXED_PANEL_COUNTS[FIXED_PANEL_COUNTS.length - 1] as number,
+    batteryKwh: BATTERY_KWH_OPTIONS[BATTERY_KWH_OPTIONS.length - 1],
+  };
+  for (const panels of FIXED_PANEL_COUNTS) {
+    const kwp = (panels * PANEL_CAPACITY_W) / 1000;
+    for (const batt of BATTERY_KWH_OPTIONS) {
+      const { coverage } = runHourlySim(kwp, batt, hourlyLoad);
+      if (coverage > bestCov) {
+        bestCov = coverage;
+        fallback = { panels, batteryKwh: batt };
+      }
+    }
+  }
+  return fallback;
 }
 
 // ─── Types ───
@@ -215,41 +352,22 @@ function calcDeviceKwh(device: DeviceEntry): { dayKwh: number; nightKwh: number 
 // ─── Main calculation ───
 
 function calcSystemTier(
-  savingsFactor: number,
-  monthlyConsumptionKwh: number,
-  dayTimeKwh: number,
-  nightTimeKwh: number,
+  targetCoverage: number,
+  hourlyLoad: number[],
   electricityRate: number,
   withBattery: boolean,
   label: string,
-  snapToFixed = true
 ): SystemTier {
-  // Battery sizing: scale in 5 kWh increments to cover target portion of nighttime load
-  let batteryKwh = 0;
-  if (withBattery) {
-    const nightConsumptionPerDay = nightTimeKwh / 30;
-    const neededBatteryOutput = savingsFactor * nightConsumptionPerDay;
-    const rawBatteryKwh = neededBatteryOutput / BATTERY_DOD;
-    batteryKwh = Math.max(5, Math.ceil(rawBatteryKwh / 5) * 5);
-  }
-
-  // Panel sizing
-  let panelsRaw: number;
-  if (withBattery) {
-    // Battery tiers: size to cover (day + night/battery) at the savings factor
-    const battNight = nightTimeKwh / BATTERY_EFFICIENCY / BATTERY_DOD;
-    const dailyCapacity = (dayTimeKwh + battNight) * 12 / 365;
-    panelsRaw = (savingsFactor * dailyCapacity * 1000) / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
-  } else {
-    // No-battery starter: size so that (production × dayTimePct) = savingsFactor × totalConsumption
-    // i.e. system produces enough during the day to cover the target % of the full bill
-    const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
-    const neededMonthlyProduction = (savingsFactor * monthlyConsumptionKwh) / dayTimePct;
-    panelsRaw = (neededMonthlyProduction / 30) * 1000 / PANEL_CAPACITY_W / KWH_PER_KWP_PER_DAY;
-  }
-  const rawCeil = Math.max(8, Math.ceil(panelsRaw));
-  const panels = snapToFixed ? snapToFixedPanels(rawCeil) : rawCeil;
+  const { panels, batteryKwh } = selectTierSize(targetCoverage, withBattery, hourlyLoad);
   const kwpSystem = (panels * PANEL_CAPACITY_W) / 1000;
+
+  // Run simulation to get actual savings
+  const { coverage, dailySavingsKwh } = runHourlySim(kwpSystem, batteryKwh, hourlyLoad);
+  const DAYS_PER_MONTH = 365 / 12;
+  const savingsKwh = dailySavingsKwh * DAYS_PER_MONTH;
+  // Round monthly peso savings to nearest ₱100 — matches Schedule J45 ROUND(...,-2)
+  const monthlySavings = Math.round(electricityRate * savingsKwh / 100) * 100;
+  const savingsPct = coverage; // coverage fraction = savingsKwh / monthlyConsumptionKwh
 
   // Actual interest rate — 2% risk premium for systems under 8 panels (ADMIN!C22)
   const actualRate = panels < RISK_PREMIUM_PANELS ? RISK_PREMIUM_RATE : BASE_RTO_RATE;
@@ -265,52 +383,20 @@ function calcSystemTier(
   const inverterDP = inverter.priceDP;
 
   let batteryTotalDP = 0;
-  if (withBattery) {
+  if (batteryKwh > 0) {
     const numBatteries = Math.ceil(batteryKwh / BATTERY_UNIT_KWH);
     const numRacks = Math.ceil(numBatteries / BATTERY_RACK_CAPACITY);
-    batteryTotalDP = numBatteries * BATTERY_UNIT_DP
-                   + numRacks * BATTERY_RACK_DP
-                   + ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
+    batteryTotalDP =
+      numBatteries * BATTERY_UNIT_DP +
+      numRacks * BATTERY_RACK_DP +
+      ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
   }
 
   const totalDP = panelsCostDP + mountingDP + cablesDP + laborDP + inverterDP + batteryTotalDP;
 
-  // RTO price — derived from DP at actual rate (annuity due, 60-mo), matching Excel ADMIN!E28 pattern
+  // RTO price — derived from DP at actual rate (annuity due, 60-mo)
   const totalRTO = dpToRto(totalDP, actualRate);
   const monthlyPaymentRTO = totalRTO / 60;
-
-  // Savings
-  // With battery: actual production-based formula
-  //   1. Direct daytime use: solar consumed as it's produced (capped by daytime consumption)
-  //   2. Excess solar charges the battery (capped by usable battery capacity)
-  //   3. Battery discharges at night (capped by night consumption)
-  // Without battery: system production * dayTimePct (fraction of solar that overlaps with daytime usage),
-  //   capped at actual daytime consumption (can't save more than you use during the day)
-  // Monthly days factor — matches Schedule.js: * 365/12
-  const DAYS_PER_MONTH = 365 / 12;
-
-  let savingsKwh: number;
-  if (withBattery) {
-    const solarPerDay = kwpSystem * KWH_PER_KWP_PER_DAY;
-    const dayConsumptionPerDay = dayTimeKwh / DAYS_PER_MONTH;
-    const nightConsumptionPerDay = nightTimeKwh / DAYS_PER_MONTH;
-
-    const directUsePerDay = Math.min(solarPerDay, dayConsumptionPerDay);
-    const excessSolarPerDay = solarPerDay - directUsePerDay;
-
-    // Battery: usable storage = min(excess, capacity×eff) × DOD  (mirrors Schedule H12)
-    const usableBatteryStorage = Math.min(excessSolarPerDay, batteryKwh * BATTERY_EFFICIENCY) * BATTERY_DOD;
-    const nightSavingsPerDay = Math.min(usableBatteryStorage, nightConsumptionPerDay);
-
-    savingsKwh = (directUsePerDay + nightSavingsPerDay) * DAYS_PER_MONTH;
-  } else {
-    const monthlyProduction = kwpSystem * KWH_PER_KWP_PER_DAY * DAYS_PER_MONTH;
-    const dayTimePct = monthlyConsumptionKwh > 0 ? dayTimeKwh / monthlyConsumptionKwh : 0.5;
-    savingsKwh = Math.min(monthlyProduction * dayTimePct, dayTimeKwh);
-  }
-  // Round monthly peso savings to nearest ₱100 — matches Schedule J45 ROUND(...,-2)
-  const monthlySavings = Math.round(electricityRate * savingsKwh / 100) * 100;
-  const savingsPct = monthlyConsumptionKwh > 0 ? savingsKwh / monthlyConsumptionKwh : 0;
 
   // Payback (simple) — from SCHEDULE X3 formula
   const annualSavings = monthlySavings * 12;
@@ -376,13 +462,17 @@ export function calculate(inputs: CalcInputs): CalcResult {
   else if (dayTimePct < 0.5) usageProfile = "Night Time User";
   else usageProfile = "Balanced User";
 
-  // 3 tiers
-  // Starter: no battery, snapped to smallest fixed size hitting ≥30% daytime savings
-  // Recommended: 1× 5kWh battery, snapped to smallest fixed size hitting ≥50% total savings
-  // Full: exact computed size (no snapping) — custom pricing, shows actual kWp needed for 100% coverage
-  const starter = calcSystemTier(0.3, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, false, "Starter System");
-  const recommended = calcSystemTier(0.5, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "With Battery");
-  const full = calcSystemTier(1.0, monthlyConsumptionKwh, dayTimeKwh, nightTimeKwh, rate, true, "Full Independence");
+  // Build 24-hour load profile for hourly simulation (average day, kWh per hour)
+  const dailyBaseloadKwh = Math.max(0, baseload) * 12 / 365;
+  const hourlyLoad = buildHourlyLoad(inputs.devices, dailyBaseloadKwh);
+
+  // 3 tiers (coverage-based, using hourly simulation matching reference schedule.js)
+  // Starter: no battery, smallest fixed kWp with coverage ≥ 30%
+  // Recommended: with battery, lowest-cost combo with coverage ≥ 50%
+  // Full Independence: with battery, lowest-cost combo with coverage = 100%
+  const starter = calcSystemTier(0.30, hourlyLoad, rate, false, "Starter System");
+  const recommended = calcSystemTier(0.50, hourlyLoad, rate, true, "With Battery");
+  const full = calcSystemTier(1.00, hourlyLoad, rate, true, "Full Independence");
 
   return {
     monthlyConsumptionKwh: Math.round(monthlyConsumptionKwh),
