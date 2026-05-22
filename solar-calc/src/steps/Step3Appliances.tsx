@@ -11,6 +11,8 @@ import {
 } from "../components/ui";
 
 const MAX_DEVICES = 7;
+const DEFAULT_RATE = 14.5;
+const DAYS_PER_MONTH = 365 / 12;
 
 function defaultDevice(): DeviceEntry {
   return {
@@ -82,33 +84,6 @@ function DeviceCard({
         options={DEVICES.map((d) => d.name)}
       />
 
-      {/* Quantity */}
-      <div className="flex flex-col gap-1">
-        <span className="text-base font-medium text-neutral-700">
-          Set quantity of appliance
-        </span>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="w-8 h-8 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 disabled:opacity-40 cursor-pointer"
-            onClick={() => upd({ quantity: Math.max(1, device.quantity - 1) })}
-            disabled={device.quantity <= 1}
-          >
-            &minus;
-          </button>
-          <span className="text-sm font-medium w-6 text-center">
-            {device.quantity}
-          </span>
-          <button
-            type="button"
-            className="w-8 h-8 rounded-lg border border-neutral-300 flex items-center justify-center text-neutral-600 hover:bg-neutral-100 cursor-pointer"
-            onClick={() => upd({ quantity: device.quantity + 1 })}
-          >
-            +
-          </button>
-        </div>
-      </div>
-
       {/* Usage hours */}
       <div className="flex flex-col gap-1">
         <span className="text-base font-medium text-neutral-700">
@@ -162,10 +137,32 @@ function DeviceCard({
   );
 }
 
+/* ── Compute total device kWh/month ── */
+function deviceTotalKwh(devices: DeviceEntry[]): number {
+  let total = 0;
+  for (const device of devices) {
+    const info = DEVICES.find((d) => d.name === device.deviceName);
+    if (!info) continue;
+    // Convert on/off to 0-24 hours
+    const toH24 = (h: number, ampm: "AM" | "PM") =>
+      ampm === "AM" ? (h === 12 ? 0 : h) : h === 12 ? 12 : h + 12;
+    const on = toH24(device.onTimeHour, device.onTimeAmPm) + device.onTimeMinute / 60;
+    const off = toH24(device.offTimeHour, device.offTimeAmPm) + device.offTimeMinute / 60;
+    const hours = off > on ? off - on : 24 - on + off;
+    total += hours * info.avgPower * (device.daysPerWeek / 7) * DAYS_PER_MONTH;
+  }
+  return total;
+}
+
 /* ── Main component ── */
 export default function Step3Appliances() {
   const { formData, updateForm, setStep } = useWizard();
   const devices = formData.devices;
+
+  const monthlyConsumptionKwh =
+    parseFloat(formData.electricityBill) / DEFAULT_RATE || 0;
+  const inconsistent =
+    devices.length > 0 && deviceTotalKwh(devices) > monthlyConsumptionKwh;
 
   const addDevice = () => {
     if (devices.length >= MAX_DEVICES) return;
@@ -211,6 +208,20 @@ export default function Step3Appliances() {
             you use the most power.
           </p>
         </div>
+
+        {/* Inconsistency warning */}
+        {inconsistent && (
+          <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3">
+            <p className="text-sm font-semibold text-yellow-800 leading-5">
+              Something doesn&apos;t add up.
+            </p>
+            <p className="text-sm font-normal text-yellow-800 leading-5 mt-0.5">
+              The devices you&apos;ve listed consume more than your monthly bill
+              suggests. Please review the device counts, hours, or your monthly
+              bill.
+            </p>
+          </div>
+        )}
 
         {/* Device list */}
         <div className="flex flex-col gap-4">
