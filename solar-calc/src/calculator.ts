@@ -422,17 +422,15 @@ export function calculate(inputs: CalcInputs): CalcResult {
   const hourlyLoad = buildHourlyLoad(inputs.devices, dailyBaseloadKwh);
 
   // 3 tiers (coverage-based, using hourly simulation matching reference schedule.js)
-  // Starter: no battery, always the minimum available system (5 kWp / 8 panels).
-  //   Target = 0 so selectTierSize immediately picks the first (smallest) fixed size.
-  //   Night-heavy profiles only reach ~28-30% coverage with 5 kWp+no battery, so a
-  //   30% target was causing the starter to incorrectly size up to 6 kWp.
-  // Recommended: with battery, lowest-cost combo with coverage ≥ 40%.
-  //   5 kWp + 5 kWh reaches 42-52% depending on load profile, which satisfies 40%.
-  //   The old 50% target was causing the recommended tier to size up unnecessarily for
-  //   night-heavy (typical Filipino) load profiles where 5kWp+5kWh only covers ~42%.
+  // Starter: no battery, smallest solar-only system with coverage ≥ 30%.
+  //   For a balanced 30k/month user this resolves to 6 kWp (32.9% coverage).
+  //   5 kWp only reaches ~26.7% which falls below the 30% savings threshold.
+  // Recommended: with battery, lowest-cost combo with coverage ≥ 50%.
+  //   For a balanced 30k/month user this resolves to 10 kWp + 10 kWh (52.5%).
+  //   This is the smallest system+battery combination that guarantees at least 50% savings.
   // Full Independence: with battery, lowest-cost combo with coverage = 100% (hidden tier).
-  const starter = calcSystemTier(0, hourlyLoad, rate, false, "Starter System");
-  const recommended = calcSystemTier(0.40, hourlyLoad, rate, true, "With Battery");
+  const starter = calcSystemTier(0.30, hourlyLoad, rate, false, "Starter System");
+  const recommended = calcSystemTier(0.50, hourlyLoad, rate, true, "With Battery");
   const full = calcSystemTier(1.00, hourlyLoad, rate, true, "Full Independence");
 
   return {
