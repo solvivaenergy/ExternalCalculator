@@ -1,3 +1,6 @@
+# Separate projects
+solviva calc/
+
 # OS
 .DS_Store
 Thumbs.db

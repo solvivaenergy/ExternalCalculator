@@ -146,8 +146,10 @@ function deviceTotalKwh(devices: DeviceEntry[]): number {
     // Convert on/off to 0-24 hours
     const toH24 = (h: number, ampm: "AM" | "PM") =>
       ampm === "AM" ? (h === 12 ? 0 : h) : h === 12 ? 12 : h + 12;
-    const on = toH24(device.onTimeHour, device.onTimeAmPm) + device.onTimeMinute / 60;
-    const off = toH24(device.offTimeHour, device.offTimeAmPm) + device.offTimeMinute / 60;
+    const on =
+      toH24(device.onTimeHour, device.onTimeAmPm) + device.onTimeMinute / 60;
+    const off =
+      toH24(device.offTimeHour, device.offTimeAmPm) + device.offTimeMinute / 60;
     const hours = off > on ? off - on : 24 - on + off;
     total += hours * info.avgPower * (device.daysPerWeek / 7) * DAYS_PER_MONTH;
   }

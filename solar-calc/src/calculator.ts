@@ -27,52 +27,35 @@ const KWH_PER_KWP_PER_DAY = 3.6;            // Admin C125
 const BASE_RTO_RATE = 0.28;                  // Admin C22
 const RISK_PREMIUM_RATE = 0.32;              // Admin C22 + C24 (28% + 400bps)
 const RISK_PREMIUM_PANELS = 8;               // Admin C23
-const BATTERY_EFFICIENCY = 0.92;             // Admin C126
+const BATTERY_EFFICIENCY = 0.98;             // ASSUMPTIONS C31 (v1.4 Proposal Generator)
 const BATTERY_DOD = 0.95;                    // Admin C127
 const PANEL_DEGRADATION = 0.005;             // Admin C128
 
-// Pricing per panel (v3.2 direct prices — Inventory D3)
-const PRICE_PER_PANEL_DP = 8600;
-const MIN_MOUNTING_SUPPORT_DP = 8579;        // Admin D32
-const MOUNTING_PCT = 0.13;                   // Admin C33
-const CABLE_PCT_TABLE = [
-  // Admin B36:G48 — dcCablePct + acCablePct + conduitsPct + panelBoardPct
-  { panels: 1,   total: 0.56 },  // 0.27+0.08+0.12+0.09
-  { panels: 8,   total: 0.56 },  // 0.27+0.08+0.12+0.09
-  { panels: 10,  total: 0.52 },  // 0.27+0.07+0.10+0.08
-  { panels: 13,  total: 0.51 },  // 0.27+0.06+0.10+0.08
-  { panels: 16,  total: 0.45 },  // 0.22+0.06+0.10+0.07
-  { panels: 19,  total: 0.40 },  // 0.19+0.06+0.09+0.06
-  { panels: 24,  total: 0.32 },  // 0.15+0.05+0.07+0.05
-  { panels: 31,  total: 0.29 },  // 0.13+0.05+0.07+0.04
-];
+// Solar package direct-purchase prices — fixed per ASSUMPTIONS sheet (v1.4 Proposal Generator)
+// Key: panel count → spotcash price (panels+inverter+mounting+cables+labor all-in)
+const SOLAR_DP_TABLE: Record<number, number> = {
+  8:  233_000,   // 5 kWp (5.04 actual)
+  10: 289_000,   // 6 kWp (6.3 actual)
+  13: 378_000,   // 8 kWp (8.19 actual)
+  16: 418_000,   // 10 kWp (10.08 actual)
+  20: 497_000,   // 12 kWp (12.6 actual)
+  24: 593_000,   // 15 kWp (15.12 actual)
+  32: 765_000,   // 20 kWp (20.16 actual)
+};
 
-// Inverter lookup (kWp → inverter) — Inventory single-phase prices
-const INVERTERS = [
-  { minKwp: 0.01, name: "5.00 kW Inverter", ratedKw: 5,  priceDP: 58384  },
-  { minKwp: 5,    name: "6.00 kW Inverter", ratedKw: 6,  priceDP: 65967  },
-  { minKwp: 6,    name: "8.00 kW Inverter", ratedKw: 8,  priceDP: 87197  },
-  { minKwp: 8,    name: "12.00 kW Inverter", ratedKw: 12, priceDP: 122076 },
-  { minKwp: 12,   name: "16.00 kW Inverter", ratedKw: 16, priceDP: 166054 },
-];
-
-// Battery pricing — 5 kWh pack (Admin batteryPackages[0])
+// Battery pricing — 5 kWh pack (COGS sheet selling prices, margin built-in)
 const BATTERY_UNIT_KWH = 5;
-const BATTERY_UNIT_DP = 91898;               // per unit
+const BATTERY_UNIT_DP = 89_444.44;           // 5kW Pylontech battery per unit
 const BATTERY_RACK_CAPACITY = 3;             // units per rack
-const BATTERY_RACK_DP = 7582;               // per rack
-const ATS_DP = 9099;
-const CRITICAL_LOADS_DP = 3336;
-const BATTERY_LABOR_W_SOLAR_DP = 15923;
+const BATTERY_RACK_DP = 7_777.78;            // per rack
+const ATS_DP = 9_333.33;
+const CRITICAL_LOADS_DP = 3_422.22;
+const BATTERY_LABOR_W_SOLAR_DP = 16_333.33;
 
-// Labor & fixed overhead (direct purchase — Admin D53, D109:D113)
-const SOLAR_LABOR_PER_KWP_DP = 8341;
-const FIXED_OVERHEAD_DP = 2943 + 2066 + 0 + 7582 + 4549; // = 17140
-
-// Fixed available system sizes (panels → kWp) from the proposal generator
-// Rounded labels: 5, 6, 8, 10, 13, 15, 20 kWp
-const FIXED_PANEL_COUNTS = [8, 10, 13, 16, 21, 25, 32] as const;
-const PANEL_KWP_LABEL: Record<number, number> = { 8: 5, 10: 6, 13: 8, 16: 10, 21: 13, 25: 15, 32: 20 };
+// Fixed available system sizes (panels → marketing kWp label) — ASSUMPTIONS sheet
+// Labels: 5, 6, 8, 10, 12, 15, 20 kWp
+const FIXED_PANEL_COUNTS = [8, 10, 13, 16, 20, 24, 32] as const;
+const PANEL_KWP_LABEL: Record<number, number> = { 8: 5, 10: 6, 13: 8, 16: 10, 20: 12, 24: 15, 32: 20 };
 
 // Battery sizes to iterate (5 kWh per unit)
 const BATTERY_KWH_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
@@ -93,22 +76,6 @@ function dpToRto(dp: number, annualRate: number): number {
   const n = 60;
   const factor = Math.pow(1 + r, n);
   return dp * r * factor / ((factor - 1) * (1 + r)) * n;
-}
-
-function lookupCablePct(panels: number): number {
-  let result = CABLE_PCT_TABLE[0].total;
-  for (const entry of CABLE_PCT_TABLE) {
-    if (panels >= entry.panels) result = entry.total;
-  }
-  return result;
-}
-
-function lookupInverter(kwp: number) {
-  let inv = INVERTERS[0];
-  for (const entry of INVERTERS) {
-    if (kwp >= entry.minKwp) inv = entry;
-  }
-  return inv;
 }
 
 // ─── Hourly load profile ───
@@ -160,9 +127,9 @@ function runHourlySim(
     excessSolar[h] = prod - solarUsed[h];
   }
   const dailyExcess = excessSolar.reduce((s, v) => s + v, 0);
-  // Schedule H12: usable battery = min(excess, cap×eff) × DOD
+  // Schedule H12: usable battery = min(excess, cap) × eff × DOD  (mirrors Excel MIN(G37,V17)*C31*C32)
   let battRemaining =
-    Math.min(dailyExcess, batteryKwh * BATTERY_EFFICIENCY) * BATTERY_DOD;
+    Math.min(dailyExcess, batteryKwh) * BATTERY_EFFICIENCY * BATTERY_DOD;
   let afterBattTotal = 0;
   for (let h = 0; h < 24; h++) {
     const uncovered = hourlyLoad[h] - solarUsed[h];
@@ -177,12 +144,7 @@ function runHourlySim(
 
 // ─── Direct-purchase price estimate (for tier cost comparison) ───
 function computeDP(panels: number, batteryKwh: number): number {
-  const kwp = (panels * PANEL_CAPACITY_W) / 1000;
-  const pCost = panels * PRICE_PER_PANEL_DP;
-  const mounting = Math.max(MIN_MOUNTING_SUPPORT_DP, pCost * MOUNTING_PCT);
-  const cables = lookupCablePct(panels) * pCost;
-  const labor = kwp * SOLAR_LABOR_PER_KWP_DP + FIXED_OVERHEAD_DP;
-  const inv = lookupInverter(kwp).priceDP;
+  const solarDP = SOLAR_DP_TABLE[panels] ?? 0;
   let battCost = 0;
   if (batteryKwh > 0) {
     const n = Math.ceil(batteryKwh / BATTERY_UNIT_KWH);
@@ -191,7 +153,7 @@ function computeDP(panels: number, batteryKwh: number): number {
       Math.ceil(n / BATTERY_RACK_CAPACITY) * BATTERY_RACK_DP +
       ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
   }
-  return pCost + mounting + cables + labor + inv + battCost;
+  return solarDP + battCost;
 }
 
 // ─── Coverage-based tier size selection ───
@@ -372,15 +334,8 @@ function calcSystemTier(
   // Actual interest rate — 2% risk premium for systems under 8 panels (ADMIN!C22)
   const actualRate = panels < RISK_PREMIUM_PANELS ? RISK_PREMIUM_RATE : BASE_RTO_RATE;
 
-  const cablePct = lookupCablePct(panels);
-  const inverter = lookupInverter(kwpSystem);
-
-  // Direct purchase price
-  const panelsCostDP = panels * PRICE_PER_PANEL_DP;
-  const mountingDP = Math.max(MIN_MOUNTING_SUPPORT_DP, panelsCostDP * MOUNTING_PCT);
-  const cablesDP = cablePct * panelsCostDP;
-  const laborDP = kwpSystem * SOLAR_LABOR_PER_KWP_DP + FIXED_OVERHEAD_DP;
-  const inverterDP = inverter.priceDP;
+  // Direct purchase price — solar from fixed table, battery from COGS selling prices
+  const solarDP = SOLAR_DP_TABLE[panels] ?? 0;
 
   let batteryTotalDP = 0;
   if (batteryKwh > 0) {
@@ -392,7 +347,7 @@ function calcSystemTier(
       ATS_DP + CRITICAL_LOADS_DP + BATTERY_LABOR_W_SOLAR_DP;
   }
 
-  const totalDP = panelsCostDP + mountingDP + cablesDP + laborDP + inverterDP + batteryTotalDP;
+  const totalDP = solarDP + batteryTotalDP;
 
   // RTO price — derived from DP at actual rate (annuity due, 60-mo)
   const totalRTO = dpToRto(totalDP, actualRate);
@@ -467,11 +422,17 @@ export function calculate(inputs: CalcInputs): CalcResult {
   const hourlyLoad = buildHourlyLoad(inputs.devices, dailyBaseloadKwh);
 
   // 3 tiers (coverage-based, using hourly simulation matching reference schedule.js)
-  // Starter: no battery, smallest fixed kWp with coverage ≥ 30%
-  // Recommended: with battery, lowest-cost combo with coverage ≥ 50%
-  // Full Independence: with battery, lowest-cost combo with coverage = 100%
-  const starter = calcSystemTier(0.30, hourlyLoad, rate, false, "Starter System");
-  const recommended = calcSystemTier(0.50, hourlyLoad, rate, true, "With Battery");
+  // Starter: no battery, always the minimum available system (5 kWp / 8 panels).
+  //   Target = 0 so selectTierSize immediately picks the first (smallest) fixed size.
+  //   Night-heavy profiles only reach ~28-30% coverage with 5 kWp+no battery, so a
+  //   30% target was causing the starter to incorrectly size up to 6 kWp.
+  // Recommended: with battery, lowest-cost combo with coverage ≥ 40%.
+  //   5 kWp + 5 kWh reaches 42-52% depending on load profile, which satisfies 40%.
+  //   The old 50% target was causing the recommended tier to size up unnecessarily for
+  //   night-heavy (typical Filipino) load profiles where 5kWp+5kWh only covers ~42%.
+  // Full Independence: with battery, lowest-cost combo with coverage = 100% (hidden tier).
+  const starter = calcSystemTier(0, hourlyLoad, rate, false, "Starter System");
+  const recommended = calcSystemTier(0.40, hourlyLoad, rate, true, "With Battery");
   const full = calcSystemTier(1.00, hourlyLoad, rate, true, "Full Independence");
 
   return {
