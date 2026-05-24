@@ -150,18 +150,28 @@ function TierCard({
 
         {/* Pricing */}
         <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-base font-medium text-neutral-800 leading-6">
-              ₱
-              {(purchaseMode === "rto"
-                ? tier.priceRTO
-                : tier.priceDP
-              ).toLocaleString()}
-            </p>
-            <p className="text-xs font-medium text-neutral-600 leading-[18px]">
-              Price
-            </p>
-          </div>
+          {purchaseMode === "rto" ? (
+            <div>
+              <p className="text-base font-medium text-neutral-800 leading-6">
+                ₱{tier.monthlyPaymentRTO.toLocaleString()}/month
+              </p>
+              <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+                Monthly Payment (60 months)
+              </p>
+              <p className="text-xs text-neutral-400 leading-[18px]">
+                ₱{tier.priceRTO.toLocaleString()} total
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-base font-medium text-neutral-800 leading-6">
+                ₱{tier.priceDP.toLocaleString()}
+              </p>
+              <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+                Price
+              </p>
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <div>
               <p className="text-base font-medium text-neutral-800 leading-6">
