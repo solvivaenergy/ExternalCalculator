@@ -1,14 +1,52 @@
-﻿import { useWizard } from "../context/WizardContext";
+﻿import { useState } from "react";
+import { useWizard } from "../context/WizardContext";
 import Layout from "../components/Layout";
 import { Button, ButtonFooter } from "../components/ui";
 
 export default function Step6Confirmation() {
-  const { result, selectedTierIndex, setStep, purchaseMode } = useWizard();
+  const { result, selectedTierIndex, setStep, purchaseMode, formData } =
+    useWizard();
+  const [sending, setSending] = useState(false);
 
   if (!result) return null;
 
   const tiers = [result.starter, result.recommended, result.full] as const;
   const tier = tiers[selectedTierIndex];
+
+  async function sendEstimate() {
+    setSending(true);
+    const nameParts = formData.fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] ?? "";
+    const lastName = nameParts.slice(1).join(" ");
+    try {
+      await fetch("/calculator/api/send-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: formData.email,
+          phone: "+63" + formData.mobile,
+          monthlyBill: formData.electricityBill,
+          city: formData.location,
+          propertyType: formData.propertyType,
+          installTimeline: formData.installTimeline,
+          homeOwnership: formData.homeOwnership,
+          kwpLabel: tier.kwpLabel,
+          batteryKwh: tier.batteryKwh,
+          coveragePct: Math.round(tier.savingsPct * 100),
+          purchaseMode,
+          priceRTO: tier.priceRTO,
+          priceDP: tier.priceDP,
+        }),
+      });
+    } catch {
+      // proceed to confirmation even if the request fails
+    } finally {
+      setSending(false);
+      setStep(10);
+    }
+  }
 
   return (
     <Layout fullWidth>
@@ -138,7 +176,9 @@ export default function Step6Confirmation() {
 
         <div className="order-3">
           <ButtonFooter>
-            <Button onClick={() => setStep(10)}>Send me a copy</Button>
+            <Button onClick={sendEstimate} disabled={sending}>
+              {sending ? "Sending…" : "Send me a copy"}
+            </Button>
           </ButtonFooter>
         </div>
       </div>

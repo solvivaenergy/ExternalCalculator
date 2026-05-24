@@ -26,6 +26,7 @@ const COOKIE_NAME = "sv_calc_auth";
 const SESSION_HOURS = 8;
 const LOGIN_PATH = "/calculator/_login";
 const CALC_PREFIX = "/calculator";
+const SEND_ESTIMATE_PATH = "/calculator/api/send-estimate";
 
 export default {
   async fetch(request, env) {
@@ -55,10 +56,105 @@ export default {
       return renderLoginPage(false, url);
     }
 
+    // ── API: submit calculator lead to Odoo CRM ────────────────────────────
+    if (request.method === "POST" && url.pathname === SEND_ESTIMATE_PATH) {
+      return handleSendEstimate(request, env);
+    }
+
     // ── Authenticated — proxy to GitHub Pages origin ──────────────────────
     return proxy(request, env);
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Send estimate → Odoo CRM webhook
+// Required secret: ODOO_LEAD_WEBHOOK_URL
+//   wrangler secret put ODOO_LEAD_WEBHOOK_URL
+//   → https://solvivaenergy-sh.odoo.com/web/hook/a6d7b50b-ab00-44b9-a9b0-28ccada012b4
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleSendEstimate(request, env) {
+  const webhookUrl = env.ODOO_LEAD_WEBHOOK_URL;
+  if (!webhookUrl) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "not configured" }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response(JSON.stringify({ ok: false, error: "invalid JSON" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Required fields check
+  const { email, firstName, phone } = body;
+  if (!email || !firstName || !phone) {
+    return new Response(
+      JSON.stringify({ ok: false, error: "missing required fields" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  // Build the payload matching the existing Meta-to-CRM field schema
+  const payload = new URLSearchParams({
+    first_name: body.firstName ?? "",
+    last_name: body.lastName ?? "",
+    phone: body.phone ?? "",
+    email: body.email ?? "",
+    monthly_bill: String(body.monthlyBill ?? ""),
+    city: body.city ?? "",
+    type_of_home: body.propertyType ?? "",
+    solar_timeline: body.installTimeline ?? "",
+    own_home: body.homeOwnership ?? "",
+    lead_next_step: "Consultation",
+    utm_source: "calculator",
+    utm_medium: "organic",
+    utm_channel: "website",
+    utm_form_name: "External Calculator",
+    kwp_system: String(body.kwpLabel ?? ""),
+    battery_kwh: String(body.batteryKwh ?? 0),
+    coverage_pct: String(body.coveragePct ?? ""),
+    purchase_mode: body.purchaseMode ?? "",
+    price_rto: String(body.priceRTO ?? ""),
+    price_dp: String(body.priceDP ?? ""),
+  });
+
+  try {
+    const odooResp = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: payload.toString(),
+    });
+    if (!odooResp.ok) {
+      const text = await odooResp.text();
+      return new Response(JSON.stringify({ ok: false, error: text }), {
+        status: 502,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return new Response(JSON.stringify({ ok: true }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ ok: false, error: String(err) }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Login handler
