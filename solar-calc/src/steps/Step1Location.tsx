@@ -19,12 +19,25 @@ export default function Step1Location() {
       setStep(-1);
       return;
     }
-    // Build "Region ~ City" from the matched area and the part before it
+    // Build city string from the matched area and the part before it.
+    // Strip trailing " City" suffix except for "Quezon City" and "Cavite City"
+    // which are stored as-is in Odoo's qualification list.
     const areaIdx = loc.toLowerCase().indexOf(matchedArea.toLowerCase());
     const before = loc.substring(0, areaIdx).replace(/,\s*$/, "").trim();
     const beforeParts = before.split(",").map((p) => p.trim()).filter(Boolean);
-    const cityPart = beforeParts[beforeParts.length - 1];
-    const formattedCity = cityPart ? `${matchedArea} ~ ${cityPart}` : matchedArea;
+    const rawCity = beforeParts[beforeParts.length - 1] ?? "";
+    const KEEP_CITY_SUFFIX = ["quezon city", "cavite city"];
+    const normalizedCity = KEEP_CITY_SUFFIX.includes(rawCity.toLowerCase())
+      ? rawCity
+      : rawCity.replace(/\s+city$/i, "").trim();
+    // Metro Manila uses "Metro Manila ~ City" prefix; provinces use just the city name
+    // to match Odoo's standalone city entries (e.g. 'santa rosa', 'bacoor').
+    const formattedCity =
+      matchedArea === "Metro Manila"
+        ? normalizedCity
+          ? `Metro Manila ~ ${normalizedCity}`
+          : "Metro Manila"
+        : normalizedCity || matchedArea;
     updateForm({ city: formattedCity });
     setStep(2);
   };
