@@ -151,16 +151,25 @@ function TierCard({
         {/* Pricing */}
         <div className="flex flex-col gap-4">
           <div>
-            <p className="text-base font-medium text-neutral-800 leading-6">
-              ₱
-              {(purchaseMode === "rto"
-                ? tier.priceRTO
-                : tier.priceDP
-              ).toLocaleString()}
-            </p>
-            <p className="text-xs font-medium text-neutral-600 leading-[18px]">
-              Price
-            </p>
+            {purchaseMode === "rto" ? (
+              <>
+                <p className="text-base font-medium text-neutral-800 leading-6">
+                  ₱{tier.monthlyPaymentRTO.toLocaleString()}/month
+                </p>
+                <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+                  For 60 months
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-medium text-neutral-800 leading-6">
+                  ₱{tier.priceDP.toLocaleString()}
+                </p>
+                <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+                  Direct purchase price
+                </p>
+              </>
+            )}
           </div>
           <div className="flex flex-col gap-1">
             <div>
@@ -202,9 +211,11 @@ function TierCard({
 /* ── Locked tier card ── */
 function LockedTierCard({
   tier,
+  purchaseMode,
   onRequestCustomPricing,
 }: {
   tier: SystemTier;
+  purchaseMode: "rto" | "direct";
   onRequestCustomPricing: () => void;
 }) {
   return (
@@ -221,12 +232,25 @@ function LockedTierCard({
       <div className="relative mt-6">
         <div className="blur-[4px] flex flex-col gap-4">
           <div>
-            <p className="text-base font-medium text-neutral-800 leading-6">
-              ₱---,---
-            </p>
-            <p className="text-xs font-medium text-neutral-600 leading-[18px]">
-              Price
-            </p>
+            {purchaseMode === "rto" ? (
+              <>
+                <p className="text-base font-medium text-neutral-800 leading-6">
+                  ₱---/month
+                </p>
+                <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+                  For 60 months
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-base font-medium text-neutral-800 leading-6">
+                  ₱---,---
+                </p>
+                <p className="text-xs font-medium text-neutral-600 leading-[18px]">
+                  Direct purchase price
+                </p>
+              </>
+            )}
           </div>
           <div>
             <p className="text-base font-medium text-neutral-800 leading-6">
@@ -392,6 +416,7 @@ export default function Step5Results() {
           />
           <LockedTierCard
             tier={result.full}
+            purchaseMode={purchaseMode}
             onRequestCustomPricing={() => setStep(7)}
           />
         </div>
