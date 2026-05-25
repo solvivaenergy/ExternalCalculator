@@ -11,14 +11,21 @@ export default function Step1Location() {
   const handleNext = () => {
     const loc = formData.location.trim();
     if (!loc) return;
-    const isQualified = QUALIFIED_AREAS.some((a) =>
+    const matchedArea = QUALIFIED_AREAS.find((a) =>
       loc.toLowerCase().includes(a.toLowerCase()),
     );
-    if (!isQualified) {
+    if (!matchedArea) {
       setDisqualifyReason("area");
       setStep(-1);
       return;
     }
+    // Build "Region ~ City" from the matched area and the part before it
+    const areaIdx = loc.toLowerCase().indexOf(matchedArea.toLowerCase());
+    const before = loc.substring(0, areaIdx).replace(/,\s*$/, "").trim();
+    const beforeParts = before.split(",").map((p) => p.trim()).filter(Boolean);
+    const cityPart = beforeParts[beforeParts.length - 1];
+    const formattedCity = cityPart ? `${matchedArea} ~ ${cityPart}` : matchedArea;
+    updateForm({ city: formattedCity });
     setStep(2);
   };
 

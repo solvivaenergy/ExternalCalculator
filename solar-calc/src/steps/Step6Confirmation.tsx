@@ -30,7 +30,7 @@ export default function Step6Confirmation() {
           email: formData.email,
           phone: "+63" + formData.mobile,
           monthlyBill: formData.electricityBill,
-          city: formData.location,
+          city: formData.city || formData.location,
           propertyType: formData.propertyType,
           installTimeline: formData.installTimeline,
           homeOwnership: formData.homeOwnership,

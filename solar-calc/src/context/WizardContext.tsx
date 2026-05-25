@@ -24,6 +24,8 @@ export interface FormData {
   email: string;
   mobile: string;
   consentGiven: boolean;
+  // Derived
+  city: string; // formatted as "Region ~ City" after Step 1 validation
 }
 
 const DEFAULT_FORM: FormData = {
@@ -37,6 +39,7 @@ const DEFAULT_FORM: FormData = {
   email: "",
   mobile: "",
   consentGiven: false,
+  city: "",
 };
 
 export type DisqualifyReason =
