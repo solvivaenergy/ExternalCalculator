@@ -127,7 +127,9 @@ async function handleSendEstimate(request, env, ctx) {
         ? "Waitlist - DQ Area"
         : body.waitlistReason === "bill"
           ? "Waitlist - Low Bill"
-          : "Waitlist"
+          : body.waitlistReason === "condo"
+            ? "Waitlist - Condo"
+            : "Waitlist"
       : body.continuedFromArea
         ? "External Calculator - DQ Area"
         : "External Calculator",
