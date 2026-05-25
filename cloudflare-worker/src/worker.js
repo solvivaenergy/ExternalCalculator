@@ -29,7 +29,7 @@ const CALC_PREFIX = "/calculator";
 const SEND_ESTIMATE_PATH = "/calculator/api/send-estimate";
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
     // ── Login form submission ──────────────────────────────────────────────
@@ -53,7 +53,7 @@ export default {
 
     // ── API: submit calculator lead to Odoo CRM (no auth required) ──────────
     if (request.method === "POST" && url.pathname === SEND_ESTIMATE_PATH) {
-      return handleSendEstimate(request, env);
+      return handleSendEstimate(request, env, ctx);
     }
 
     // ── Auth check ────────────────────────────────────────────────────────
@@ -73,7 +73,7 @@ export default {
 //   → https://solvivaenergy-sh.odoo.com/web/hook/a6d7b50b-ab00-44b9-a9b0-28ccada012b4
 // ─────────────────────────────────────────────────────────────────────────────
 
-async function handleSendEstimate(request, env) {
+async function handleSendEstimate(request, env, ctx) {
   const webhookUrl = env.ODOO_LEAD_WEBHOOK_URL;
   if (!webhookUrl) {
     return new Response(
@@ -122,7 +122,7 @@ async function handleSendEstimate(request, env) {
     utm_source: "Calculator",
     utm_medium: "organic",
     utm_channel: "website",
-    utm_form_name: "External Calculator",
+    utm_form_name: body.waitlistReason ? "Waitlist" : "External Calculator",
     kwp_system: String(body.kwpLabel ?? ""),
     battery_kwh: String(body.batteryKwh ?? 0),
     coverage_pct: String(body.coveragePct ?? ""),
@@ -131,29 +131,20 @@ async function handleSendEstimate(request, env) {
     price_dp: String(body.priceDP ?? ""),
   });
 
-  try {
-    const odooResp = await fetch(webhookUrl, {
+  // Fire the webhook in the background so the button responds immediately.
+  // ctx.waitUntil keeps the Worker alive until the Odoo call finishes.
+  ctx.waitUntil(
+    fetch(webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload,
-    });
-    if (!odooResp.ok) {
-      const text = await odooResp.text();
-      return new Response(JSON.stringify({ ok: false, error: text }), {
-        status: 502,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return new Response(JSON.stringify({ ok: true }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: String(err) }), {
-      status: 502,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+    }).catch(() => {}),
+  );
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -23,6 +23,7 @@ const WAITLIST_DESCRIPTION: Partial<
 export default function WaitlistSignup() {
   const { formData, updateForm, setStep, disqualifyReason } = useWizard();
   const [errors, setErrors] = useState<{ email?: string; mobile?: string }>({});
+  const [sending, setSending] = useState(false);
 
   const isValidEmail = EMAIL_RE.test(formData.email.trim());
   const isValidMobile = MOBILE_RE.test(formData.mobile.trim());
@@ -31,9 +32,32 @@ export default function WaitlistSignup() {
     formData.fullName.trim() &&
     isValidEmail &&
     isValidMobile &&
-    formData.consentGiven;
+    formData.consentGiven &&
+    !sending;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    setSending(true);
+    const nameParts = formData.fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] ?? "";
+    const lastName = nameParts.slice(1).join(" ");
+    try {
+      await fetch("/calculator/api/send-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: formData.email,
+          phone: "+63" + formData.mobile,
+          city: formData.city || formData.location,
+          waitlistReason: disqualifyReason ?? "other",
+        }),
+      });
+    } catch {
+      // Fire-and-forget — proceed to confirmation regardless
+    } finally {
+      setSending(false);
+    }
     setStep(9);
   };
 
@@ -145,7 +169,7 @@ export default function WaitlistSignup() {
 
         <ButtonFooter>
           <Button onClick={handleSubmit} disabled={!canProceed}>
-            Submit
+            {sending ? "Submitting…" : "Submit"}
           </Button>
         </ButtonFooter>
       </div>
