@@ -7,6 +7,7 @@ export default function Step6Confirmation() {
   const { result, selectedTierIndex, setStep, purchaseMode, formData } =
     useWizard();
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (!result) return null;
 
@@ -15,11 +16,12 @@ export default function Step6Confirmation() {
 
   async function sendEstimate() {
     setSending(true);
+    setError(null);
     const nameParts = formData.fullName.trim().split(/\s+/);
     const firstName = nameParts[0] ?? "";
     const lastName = nameParts.slice(1).join(" ");
     try {
-      await fetch("/calculator/api/send-estimate", {
+      const resp = await fetch("/calculator/api/send-estimate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -40,11 +42,17 @@ export default function Step6Confirmation() {
           priceDP: tier.priceDP,
         }),
       });
-    } catch {
-      // proceed to confirmation even if the request fails
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        setError(data.error ?? `Request failed (${resp.status})`);
+        setSending(false);
+        return;
+      }
+      setStep(10);
+    } catch (e) {
+      setError(String(e));
     } finally {
       setSending(false);
-      setStep(10);
     }
   }
 
@@ -175,6 +183,9 @@ export default function Step6Confirmation() {
         </div>
 
         <div className="order-3">
+          {error && (
+            <p className="text-sm text-red-600 mb-2 text-center">{error}</p>
+          )}
           <ButtonFooter>
             <Button onClick={sendEstimate} disabled={sending}>
               {sending ? "Sending…" : "Send me a copy"}

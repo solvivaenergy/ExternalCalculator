@@ -51,14 +51,14 @@ export default {
       }
     }
 
+    // ── API: submit calculator lead to Odoo CRM (no auth required) ──────────
+    if (request.method === "POST" && url.pathname === SEND_ESTIMATE_PATH) {
+      return handleSendEstimate(request, env);
+    }
+
     // ── Auth check ────────────────────────────────────────────────────────
     if (!(await isAuthenticated(request, env))) {
       return renderLoginPage(false, url);
-    }
-
-    // ── API: submit calculator lead to Odoo CRM ────────────────────────────
-    if (request.method === "POST" && url.pathname === SEND_ESTIMATE_PATH) {
-      return handleSendEstimate(request, env);
     }
 
     // ── Authenticated — proxy to GitHub Pages origin ──────────────────────
@@ -108,7 +108,7 @@ async function handleSendEstimate(request, env) {
   }
 
   // Build the payload matching the existing Meta-to-CRM field schema
-  const payload = new URLSearchParams({
+  const payload = JSON.stringify({
     first_name: body.firstName ?? "",
     last_name: body.lastName ?? "",
     phone: body.phone ?? "",
@@ -119,7 +119,7 @@ async function handleSendEstimate(request, env) {
     solar_timeline: body.installTimeline ?? "",
     own_home: body.homeOwnership ?? "",
     lead_next_step: "Consultation",
-    utm_source: "calculator",
+    utm_source: "Calculator",
     utm_medium: "organic",
     utm_channel: "website",
     utm_form_name: "External Calculator",
@@ -134,8 +134,8 @@ async function handleSendEstimate(request, env) {
   try {
     const odooResp = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: payload.toString(),
+      headers: { "Content-Type": "application/json" },
+      body: payload,
     });
     if (!odooResp.ok) {
       const text = await odooResp.text();
