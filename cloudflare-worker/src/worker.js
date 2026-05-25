@@ -125,7 +125,9 @@ async function handleSendEstimate(request, env, ctx) {
     utm_form_name: body.waitlistReason
       ? body.waitlistReason === "area"
         ? "Waitlist - DQ Area"
-        : "Waitlist"
+        : body.waitlistReason === "bill"
+          ? "Waitlist - Low Bill"
+          : "Waitlist"
       : body.continuedFromArea
         ? "External Calculator - DQ Area"
         : "External Calculator",
