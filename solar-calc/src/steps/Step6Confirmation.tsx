@@ -4,8 +4,14 @@ import Layout from "../components/Layout";
 import { Button, ButtonFooter } from "../components/ui";
 
 export default function Step6Confirmation() {
-  const { result, selectedTierIndex, setStep, purchaseMode, formData } =
-    useWizard();
+  const {
+    result,
+    selectedTierIndex,
+    setStep,
+    purchaseMode,
+    formData,
+    continuedFromArea,
+  } = useWizard();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +46,7 @@ export default function Step6Confirmation() {
           purchaseMode,
           priceRTO: tier.priceRTO,
           priceDP: tier.priceDP,
+          ...(continuedFromArea ? { continuedFromArea: true } : {}),
         }),
       });
       if (!resp.ok) {

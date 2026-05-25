@@ -123,8 +123,12 @@ async function handleSendEstimate(request, env, ctx) {
     utm_medium: "organic",
     utm_channel: "website",
     utm_form_name: body.waitlistReason
-      ? (body.waitlistReason === "area" ? "Waitlist - DQ Area" : "Waitlist")
-      : "External Calculator",
+      ? body.waitlistReason === "area"
+        ? "Waitlist - DQ Area"
+        : "Waitlist"
+      : body.continuedFromArea
+        ? "External Calculator - DQ Area"
+        : "External Calculator",
     kwp_system: String(body.kwpLabel ?? ""),
     battery_kwh: String(body.batteryKwh ?? 0),
     coverage_pct: String(body.coveragePct ?? ""),

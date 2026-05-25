@@ -34,7 +34,12 @@ const CONTENT: Record<
 };
 
 export default function Disqualified() {
-  const { disqualifyReason, setStep, setDisqualifyReason } = useWizard();
+  const {
+    disqualifyReason,
+    setStep,
+    setDisqualifyReason,
+    setContinuedFromArea,
+  } = useWizard();
 
   if (!disqualifyReason) return null;
 
@@ -44,6 +49,7 @@ export default function Disqualified() {
   const continueStep = disqualifyReason === "area" ? 2 : 3;
 
   const handleContinue = () => {
+    if (disqualifyReason === "area") setContinuedFromArea(true);
     setDisqualifyReason(null);
     setStep(continueStep);
   };
