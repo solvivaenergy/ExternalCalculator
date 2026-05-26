@@ -11,6 +11,7 @@ export default function Step6Confirmation() {
     purchaseMode,
     formData,
     continuedFromArea,
+    continuedWithDQReason,
   } = useWizard();
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +47,12 @@ export default function Step6Confirmation() {
           purchaseMode,
           priceRTO: tier.priceRTO,
           priceDP: tier.priceDP,
-          ...(continuedFromArea ? { continuedFromArea: true } : {}),
+          packageType: selectedTierIndex === 2 ? "full" : "partial",
+          ...(continuedWithDQReason
+            ? { continuedWithDQReason }
+            : continuedFromArea
+              ? { continuedFromArea: true }
+              : {}),
         }),
       });
       if (!resp.ok) {

@@ -144,6 +144,9 @@ async function handleSendEstimate(request, env, ctx) {
     purchase_mode: body.purchaseMode ?? "",
     price_rto: String(body.priceRTO ?? ""),
     price_dp: String(body.priceDP ?? ""),
+    package_type: body.packageType ?? "",
+    dq_reason:
+      body.continuedWithDQReason ?? (body.continuedFromArea ? "area" : ""),
   });
 
   // Fire the webhook in the background so the button responds immediately.

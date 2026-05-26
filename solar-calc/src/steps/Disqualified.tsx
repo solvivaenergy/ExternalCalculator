@@ -39,6 +39,7 @@ export default function Disqualified() {
     setStep,
     setDisqualifyReason,
     setContinuedFromArea,
+    setContinuedWithDQReason,
   } = useWizard();
 
   if (!disqualifyReason) return null;
@@ -50,6 +51,7 @@ export default function Disqualified() {
 
   const handleContinue = () => {
     if (disqualifyReason === "area") setContinuedFromArea(true);
+    setContinuedWithDQReason(disqualifyReason);
     setDisqualifyReason(null);
     setStep(continueStep);
   };

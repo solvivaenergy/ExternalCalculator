@@ -24,7 +24,10 @@ export default function Step1Location() {
     // which are stored as-is in Odoo's qualification list.
     const areaIdx = loc.toLowerCase().indexOf(matchedArea.toLowerCase());
     const before = loc.substring(0, areaIdx).replace(/,\s*$/, "").trim();
-    const beforeParts = before.split(",").map((p) => p.trim()).filter(Boolean);
+    const beforeParts = before
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
     const rawCity = beforeParts[beforeParts.length - 1] ?? "";
     const KEEP_CITY_SUFFIX = ["quezon city", "cavite city"];
     const normalizedCity = KEEP_CITY_SUFFIX.includes(rawCity.toLowerCase())

@@ -61,6 +61,8 @@ interface WizardContextType {
   setDisqualifyReason: (r: DisqualifyReason) => void;
   continuedFromArea: boolean;
   setContinuedFromArea: (v: boolean) => void;
+  continuedWithDQReason: DisqualifyReason;
+  setContinuedWithDQReason: (r: DisqualifyReason) => void;
   selectedTierIndex: number;
   setSelectedTierIndex: (i: number) => void;
   purchaseMode: "rto" | "direct";
@@ -76,6 +78,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
   const [disqualifyReason, setDisqualifyReason] =
     useState<DisqualifyReason>(null);
   const [continuedFromArea, setContinuedFromArea] = useState(false);
+  const [continuedWithDQReason, setContinuedWithDQReason] =
+    useState<DisqualifyReason>(null);
   const [selectedTierIndex, setSelectedTierIndex] = useState(1);
   const [purchaseMode, setPurchaseMode] = useState<"rto" | "direct">("rto");
 
@@ -98,6 +102,8 @@ export function WizardProvider({ children }: { children: ReactNode }) {
         setDisqualifyReason,
         continuedFromArea,
         setContinuedFromArea,
+        continuedWithDQReason,
+        setContinuedWithDQReason,
         selectedTierIndex,
         setSelectedTierIndex,
         purchaseMode,
