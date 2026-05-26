@@ -151,7 +151,15 @@ async function handleSendEstimate(request, env, ctx) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload,
-    }).catch(() => {}),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          console.error(`[send-estimate] Odoo webhook returned ${res.status}`);
+        }
+      })
+      .catch((err) => {
+        console.error(`[send-estimate] Odoo webhook fetch failed: ${err}`);
+      }),
   );
 
   return new Response(JSON.stringify({ ok: true }), {
