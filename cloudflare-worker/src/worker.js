@@ -43,11 +43,13 @@ export default {
     if (url.pathname === LOGIN_PATH) {
       if (await isAuthenticated(request, env)) {
         const raw = url.searchParams.get("next") ?? "";
-        const safe =
+        const safePath =
           raw.startsWith(CALC_PREFIX) && !/\/\/|@/.test(raw)
             ? raw
             : CALC_PREFIX + "/";
-        return Response.redirect(safe, 302);
+        // Response.redirect requires an absolute URL in the Workers runtime
+        const absoluteUrl = `${url.protocol}//${url.host}${safePath}`;
+        return Response.redirect(absoluteUrl, 302);
       }
     }
 
