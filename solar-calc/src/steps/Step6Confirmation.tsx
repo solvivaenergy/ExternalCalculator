@@ -47,6 +47,16 @@ export default function Step6Confirmation() {
           purchaseMode,
           priceRTO: tier.priceRTO,
           priceDP: tier.priceDP,
+          monthlyPaymentRTO: tier.monthlyPaymentRTO,
+          monthlySavings: tier.monthlySavings,
+          dayTimePct: result!.dayTimePct,
+          appliances: formData.devices.map((d) => ({
+            name: d.deviceName,
+            qty: d.quantity,
+            onTime: `${d.onTimeHour}:${String(d.onTimeMinute).padStart(2, "0")} ${d.onTimeAmPm}`,
+            offTime: `${d.offTimeHour}:${String(d.offTimeMinute).padStart(2, "0")} ${d.offTimeAmPm}`,
+            daysPerWeek: d.daysPerWeek,
+          })),
           packageType: selectedTierIndex === 2 ? "full" : "partial",
           ...(continuedWithDQReason
             ? { continuedWithDQReason }

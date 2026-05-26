@@ -144,6 +144,10 @@ async function handleSendEstimate(request, env, ctx) {
     purchase_mode: body.purchaseMode ?? "",
     price_rto: String(body.priceRTO ?? ""),
     price_dp: String(body.priceDP ?? ""),
+    monthly_payment_rto: String(body.monthlyPaymentRTO ?? ""),
+    monthly_savings: String(body.monthlySavings ?? ""),
+    day_time_pct: String(body.dayTimePct ?? ""),
+    appliances: JSON.stringify(body.appliances ?? []),
     package_type: body.packageType ?? "",
     dq_reason:
       body.continuedWithDQReason ?? (body.continuedFromArea ? "area" : ""),
