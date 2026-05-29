@@ -10,13 +10,13 @@ export const DEVICES = [
   { name: "2.5hp AC", peakPower: 2.0, pctOfPeak: 0.5, avgPower: 1.0 },
   { name: "3.0hp AC", peakPower: 2.8, pctOfPeak: 0.5, avgPower: 1.4 },
   { name: "Microwave/Toaster", peakPower: 1.0, pctOfPeak: 1.0, avgPower: 1.0 },
-  { name: '6" Stove Burner', peakPower: 1.5, pctOfPeak: 0.9, avgPower: 1.35 },
-  { name: '8" Stove Burner', peakPower: 2.5, pctOfPeak: 0.9, avgPower: 2.25 },
-  { name: "Electric Oven", peakPower: 3.0, pctOfPeak: 0.8, avgPower: 2.4 },
-  { name: "Level-1 EV Charger", peakPower: 1.5, pctOfPeak: 0.9, avgPower: 1.35 },
-  { name: "Level-2 EV Charger", peakPower: 9.6, pctOfPeak: 0.9, avgPower: 8.64 },
-  { name: "Washing Machine", peakPower: 0.8, pctOfPeak: 0.7, avgPower: 0.56 },
-  { name: "Elec Clothes Dryer", peakPower: 5.0, pctOfPeak: 0.8, avgPower: 4.0 },
+  { name: '6" Stove Burner', peakPower: 1.5, pctOfPeak: 1.0, avgPower: 1.5 },
+  { name: '8" Stove Burner', peakPower: 2.5, pctOfPeak: 1.0, avgPower: 2.5 },
+  { name: "Electric Oven", peakPower: 3.0, pctOfPeak: 1.0, avgPower: 3.0 },
+  { name: "Level-1 EV Charger", peakPower: 1.5, pctOfPeak: 1.0, avgPower: 1.5 },
+  { name: "Level-2 EV Charger", peakPower: 9.6, pctOfPeak: 1.0, avgPower: 9.6 },
+  { name: "Washing Machine", peakPower: 0.8, pctOfPeak: 1.0, avgPower: 0.8 },
+  { name: "Elec Clothes Dryer", peakPower: 5.0, pctOfPeak: 1.0, avgPower: 5.0 },
 ] as const;
 
 export type DeviceName = (typeof DEVICES)[number]["name"];
@@ -29,7 +29,8 @@ const RISK_PREMIUM_RATE = 0.32;              // Admin C22 + C24 (28% + 400bps)
 const RISK_PREMIUM_PANELS = 8;               // Admin C23
 const BATTERY_EFFICIENCY = 0.98;             // ASSUMPTIONS C31 (v1.4 Proposal Generator)
 const BATTERY_DOD = 0.95;                    // Admin C127
-const PANEL_DEGRADATION = 0.005;             // Admin C128
+const PANEL_DEGRADATION = 0.005;             // ASSUMPTIONS C33
+const ELECTRICITY_PRICE_INFLATION = 0.03;    // ASSUMPTIONS C20
 
 // Solar package direct-purchase prices — fixed per ASSUMPTIONS sheet (v1.4 Proposal Generator)
 // Key: panel count → spotcash price (panels+inverter+mounting+cables+labor all-in)
@@ -303,7 +304,7 @@ function calcDeviceKwh(device: DeviceEntry): { dayKwh: number; nightKwh: number 
   }
 
   const nightHours = totalHours - dayHours;
-  const monthlyFactor = (device.daysPerWeek / 7) * 30 * device.quantity;
+  const monthlyFactor = (device.daysPerWeek / 7) * (365 / 12) * device.quantity;
 
   const dayKwh = dayHours * deviceInfo.avgPower * monthlyFactor;
   const nightKwh = nightHours * deviceInfo.avgPower * monthlyFactor;
@@ -327,8 +328,8 @@ function calcSystemTier(
   const { coverage, dailySavingsKwh } = runHourlySim(kwpSystem, batteryKwh, hourlyLoad);
   const DAYS_PER_MONTH = 365 / 12;
   const savingsKwh = dailySavingsKwh * DAYS_PER_MONTH;
-  // Round monthly peso savings to nearest ₱100 — matches Schedule J45 ROUND(...,-2)
-  const monthlySavings = Math.round(electricityRate * savingsKwh / 100) * 100;
+  // Floor monthly peso savings to nearest ₱100 — matches Excel ROUNDDOWN(...,-2)
+  const monthlySavings = Math.floor(electricityRate * savingsKwh / 100) * 100;
   const savingsPct = coverage; // coverage fraction = savingsKwh / monthlyConsumptionKwh
 
   // Actual interest rate — 2% risk premium for systems under 8 panels (ADMIN!C22)
@@ -360,12 +361,14 @@ function calcSystemTier(
   const paybackYears = Math.floor(paybackMonthsTotal / 12);
   const paybackMonths = paybackMonthsTotal % 12;
 
-  // 25-year savings (cumulative, with degradation)
-  let savings25yr = 0;
-  for (let year = 1; year <= 25; year++) {
-    const degradationFactor = Math.pow(1 - PANEL_DEGRADATION, year);
-    savings25yr += annualSavings * degradationFactor;
-  }
+  // 25-year savings — matches Excel AL30: =PV(F13/12, AK28*12, -W14, , 1)
+  // F13 = PANEL_DEGRADATION - ELECTRICITY_PRICE_INFLATION = -0.025
+  // Growing annuity: monthly savings compound at (inflation - degradation) = 2.5%/yr
+  const r25 = (PANEL_DEGRADATION - ELECTRICITY_PRICE_INFLATION) / 12;
+  const n25 = 25 * 12; // 300 months
+  const savings25yr = r25 !== 0
+    ? monthlySavings * (1 - Math.pow(1 + r25, -n25)) / r25 * (1 + r25)
+    : monthlySavings * n25;
 
   // ROI (simplified IRR approximation)
   const roi25yr = annualSavings > 0 ? ((savings25yr - totalRTO) / totalRTO) : 0;
