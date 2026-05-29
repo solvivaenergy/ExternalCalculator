@@ -1,4 +1,4 @@
-﻿import { useEffect, type ReactNode } from "react";
+﻿import { useEffect, useState, type ReactNode } from "react";
 import { useWizard } from "../context/WizardContext";
 import type { SystemTier } from "../calculator";
 import Layout from "../components/Layout";
@@ -213,10 +213,12 @@ function LockedTierCard({
   tier,
   purchaseMode,
   onRequestCustomPricing,
+  disabled,
 }: {
   tier: SystemTier;
   purchaseMode: "rto" | "direct";
   onRequestCustomPricing: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="bg-white border border-neutral-300 rounded p-4 shadow-xs relative overflow-hidden flex flex-col h-full">
@@ -284,8 +286,8 @@ function LockedTierCard({
       </div>
       {/* Custom pricing CTA */}
       <div className="mt-auto flex relative z-10">
-        <Button variant="outline" onClick={onRequestCustomPricing}>
-          Send an Inquiry
+        <Button variant="outline" onClick={onRequestCustomPricing} disabled={disabled}>
+          {disabled ? "Sending…" : "Send an Inquiry"}
         </Button>
       </div>
     </div>
@@ -300,7 +302,11 @@ export default function Step5Results() {
     setPurchaseMode,
     setStep,
     setSelectedTierIndex,
+    formData,
+    continuedFromArea,
+    continuedWithDQReason,
   } = useWizard();
+  const [sendingInquiry, setSendingInquiry] = useState(false);
 
   useEffect(() => {
     setPurchaseMode("rto");
@@ -312,6 +318,56 @@ export default function Step5Results() {
     setSelectedTierIndex(idx);
     setStep(6);
   };
+
+  async function handleRequestCustomPricing() {
+    setSendingInquiry(true);
+    const nameParts = formData.fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] ?? "";
+    const lastName = nameParts.slice(1).join(" ");
+    try {
+      await fetch("/calculator/api/send-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: formData.email,
+          phone: "+63" + formData.mobile,
+          monthlyBill: formData.electricityBill,
+          city: formData.city || formData.location,
+          propertyType: formData.propertyType,
+          installTimeline: formData.installTimeline,
+          homeOwnership: formData.homeOwnership,
+          kwpLabel: result!.full.kwpLabel,
+          batteryKwh: result!.full.batteryKwh,
+          coveragePct: Math.round(result!.full.savingsPct * 100),
+          purchaseMode,
+          priceRTO: result!.full.priceRTO,
+          priceDP: result!.full.priceDP,
+          monthlyPaymentRTO: result!.full.monthlyPaymentRTO,
+          monthlySavings: result!.full.monthlySavings,
+          dayTimePct: result!.dayTimePct,
+          appliances: formData.devices.map((d) => ({
+            name: d.deviceName,
+            onTime: `${d.onTimeHour}:${String(d.onTimeMinute).padStart(2, "0")} ${d.onTimeAmPm}`,
+            offTime: `${d.offTimeHour}:${String(d.offTimeMinute).padStart(2, "0")} ${d.offTimeAmPm}`,
+            daysPerWeek: d.daysPerWeek,
+          })),
+          packageType: "custom",
+          ...(continuedWithDQReason
+            ? { continuedWithDQReason }
+            : continuedFromArea
+              ? { continuedFromArea: true }
+              : {}),
+        }),
+      });
+    } catch {
+      // proceed to confirmation regardless
+    } finally {
+      setSendingInquiry(false);
+    }
+    setStep(7);
+  }
 
   return (
     <Layout fullWidth>
@@ -421,7 +477,8 @@ export default function Step5Results() {
           <LockedTierCard
             tier={result.full}
             purchaseMode={purchaseMode}
-            onRequestCustomPricing={() => setStep(7)}
+            onRequestCustomPricing={handleRequestCustomPricing}
+            disabled={sendingInquiry}
           />
         </div>
       </div>
