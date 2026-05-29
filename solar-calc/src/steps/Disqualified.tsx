@@ -131,7 +131,7 @@ export default function Disqualified() {
             <Button variant="secondary" onClick={handleJoinWaitlist}>
               Join waitlist
             </Button>
-            <Button onClick={handleGoBack}>Continue Exploring</Button>
+            <Button onClick={handleContinue}>Continue Exploring</Button>
           </ButtonFooter>
         )}
 
