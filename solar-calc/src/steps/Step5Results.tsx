@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react";
+﻿import { useEffect, type ReactNode } from "react";
 import { useWizard } from "../context/WizardContext";
 import type { SystemTier } from "../calculator";
 import Layout from "../components/Layout";
@@ -301,6 +301,10 @@ export default function Step5Results() {
     setStep,
     setSelectedTierIndex,
   } = useWizard();
+
+  useEffect(() => {
+    setPurchaseMode("rto");
+  }, []);
 
   if (!result) return null;
 

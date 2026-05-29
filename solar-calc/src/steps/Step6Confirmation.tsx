@@ -166,22 +166,16 @@ export default function Step6Confirmation() {
                     ).toLocaleString()}
                   </span>
                 </div>
-                <div className="flex items-center justify-between py-3">
-                  <span className="text-sm font-medium text-neutral-600 leading-5">
-                    Rent-to-Own Monthly
-                  </span>
-                  <span className="text-sm font-medium text-neutral-800 leading-5">
-                    ₱{tier.monthlyPaymentRTO.toLocaleString()}/month
-                  </span>
-                </div>
-                <div className="flex items-center justify-between py-3 last:pb-0">
-                  <span className="text-sm font-medium text-neutral-600 leading-5">
-                    Return-on-Investment
-                  </span>
-                  <span className="text-sm font-medium text-neutral-800 leading-5">
-                    {tier.roi25yr}%
-                  </span>
-                </div>
+                {purchaseMode === "rto" && (
+                  <div className="flex items-center justify-between py-3">
+                    <span className="text-sm font-medium text-neutral-600 leading-5">
+                      Rent-to-Own Monthly
+                    </span>
+                    <span className="text-sm font-medium text-neutral-800 leading-5">
+                      ₱{tier.monthlyPaymentRTO.toLocaleString()}/month
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
