@@ -56,7 +56,12 @@ export default function Step6Confirmation() {
             offTime: `${d.offTimeHour}:${String(d.offTimeMinute).padStart(2, "0")} ${d.offTimeAmPm}`,
             daysPerWeek: d.daysPerWeek,
           })),
-          packageType: selectedTierIndex === 2 ? "full" : "partial",
+          packageType:
+            selectedTierIndex === 2
+              ? "full"
+              : selectedTierIndex === 1
+                ? "recommended"
+                : "starter",
           ...(continuedWithDQReason
             ? { continuedWithDQReason }
             : continuedFromArea
