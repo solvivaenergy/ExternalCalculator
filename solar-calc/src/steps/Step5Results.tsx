@@ -357,7 +357,7 @@ export default function Step5Results() {
             offTime: `${d.offTimeHour}:${String(d.offTimeMinute).padStart(2, "0")} ${d.offTimeAmPm}`,
             daysPerWeek: d.daysPerWeek,
           })),
-          packageType: "custom",
+          packageType: "full",
           ...(continuedWithDQReason
             ? { continuedWithDQReason }
             : continuedFromArea
