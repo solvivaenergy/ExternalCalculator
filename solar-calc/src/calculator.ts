@@ -56,7 +56,7 @@ const BATTERY_LABOR_W_SOLAR_DP = 16_333.33;
 // Fixed available system sizes (panels → marketing kWp label) — ASSUMPTIONS sheet
 // Labels: 5, 6, 8, 10, 12, 15, 20 kWp
 const FIXED_PANEL_COUNTS = [8, 10, 13, 16, 20, 24, 32] as const;
-const PANEL_KWP_LABEL: Record<number, number> = { 8: 5, 10: 6, 13: 8, 16: 10, 20: 12, 24: 15, 32: 20 };
+const PANEL_KWP_LABEL: Record<number, number> = { 8: 5, 10: 6, 13: 8, 16: 10, 20: 13, 24: 15, 32: 20 };
 
 // Battery sizes to iterate (5 kWh per unit)
 const BATTERY_KWH_OPTIONS = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];

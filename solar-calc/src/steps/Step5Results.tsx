@@ -286,7 +286,11 @@ function LockedTierCard({
       </div>
       {/* Custom pricing CTA */}
       <div className="mt-auto flex relative z-10">
-        <Button variant="outline" onClick={onRequestCustomPricing} disabled={disabled}>
+        <Button
+          variant="outline"
+          onClick={onRequestCustomPricing}
+          disabled={disabled}
+        >
           {disabled ? "Sending…" : "Send an Inquiry"}
         </Button>
       </div>
