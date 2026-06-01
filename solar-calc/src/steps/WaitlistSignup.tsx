@@ -50,6 +50,10 @@ export default function WaitlistSignup() {
           email: formData.email,
           phone: "+63" + formData.mobile,
           city: formData.city || formData.location,
+          monthlyBill: formData.electricityBill,
+          propertyType: formData.propertyType,
+          homeOwnership: formData.homeOwnership,
+          installTimeline: formData.installTimeline,
           waitlistReason: disqualifyReason ?? "other",
         }),
       });
