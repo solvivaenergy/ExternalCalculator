@@ -150,7 +150,7 @@ export default function Step6Confirmation() {
                       Included Battery
                     </span>
                     <span className="text-sm font-medium text-neutral-800 leading-5">
-                      {tier.batteryKwh}kW
+                      {tier.batteryKwh}kWh
                     </span>
                   </div>
                 )}

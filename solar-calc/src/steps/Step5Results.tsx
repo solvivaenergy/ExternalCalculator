@@ -405,6 +405,7 @@ export default function Step5Results() {
             icon={<ZapIcon />}
             value={`${result.monthlyConsumptionKwh.toLocaleString()} kWh`}
             label="Average monthly consumption"
+            description="Based on your monthly electric bill"
           />
           <SummaryCard
             icon={<SunIcon />}
