@@ -358,6 +358,17 @@ export default function Step5Results() {
             daysPerWeek: d.daysPerWeek,
           })),
           packageType: "full",
+          alt1Kwp: result!.starter.kwpLabel,
+          alt1Savings: result!.starter.monthlySavings,
+          alt1Coverage: Math.round(result!.starter.savingsPct * 100),
+          alt1RTO: result!.starter.monthlyPaymentRTO,
+          alt1DP: result!.starter.priceDP,
+          alt2Kwp: result!.recommended.kwpLabel,
+          alt2Battery: result!.recommended.batteryKwh,
+          alt2Savings: result!.recommended.monthlySavings,
+          alt2Coverage: Math.round(result!.recommended.savingsPct * 100),
+          alt2RTO: result!.recommended.monthlyPaymentRTO,
+          alt2DP: result!.recommended.priceDP,
           ...(continuedWithDQReason
             ? { continuedWithDQReason }
             : continuedFromArea
