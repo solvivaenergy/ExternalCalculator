@@ -62,6 +62,24 @@ export default function Step6Confirmation() {
               : selectedTierIndex === 1
                 ? "recommended"
                 : "starter",
+          // When user picks Full Energy Independence, also send the Starter
+          // (no-battery) and Recommended (with-battery) packages so the email
+          // can offer them as alternatives.
+          ...(selectedTierIndex === 2
+            ? {
+                alt1Kwp: result!.starter.kwpLabel,
+                alt1Savings: result!.starter.monthlySavings,
+                alt1Coverage: Math.round(result!.starter.savingsPct * 100),
+                alt1RTO: result!.starter.monthlyPaymentRTO,
+                alt1DP: result!.starter.priceDP,
+                alt2Kwp: result!.recommended.kwpLabel,
+                alt2Battery: result!.recommended.batteryKwh,
+                alt2Savings: result!.recommended.monthlySavings,
+                alt2Coverage: Math.round(result!.recommended.savingsPct * 100),
+                alt2RTO: result!.recommended.monthlyPaymentRTO,
+                alt2DP: result!.recommended.priceDP,
+              }
+            : {}),
           ...(continuedWithDQReason
             ? { continuedWithDQReason }
             : continuedFromArea

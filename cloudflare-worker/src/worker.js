@@ -144,13 +144,18 @@ async function handleSendEstimate(request, env, ctx) {
     purchase_mode: body.purchaseMode ?? "",
     price_rto: String(body.priceRTO ?? ""),
     price_dp: String(body.priceDP ?? ""),
-    monthly_payment_rto: String(body.monthlyPaymentRTO ?? ""),
-    monthly_savings: String(body.monthlySavings ?? ""),
-    day_time_pct: String(body.dayTimePct ?? ""),
-    appliances: JSON.stringify(body.appliances ?? []),
-    package_type: body.packageType ?? "",
-    dq_reason:
-      body.continuedWithDQReason ?? (body.continuedFromArea ? "area" : ""),
+    // Alternative packages — only populated when user selects Energy Independence
+    alt1_kwp: String(body.alt1Kwp ?? ""),
+    alt1_savings: String(body.alt1Savings ?? 0),
+    alt1_coverage: String(body.alt1Coverage ?? 0),
+    alt1_rto: String(body.alt1RTO ?? 0),
+    alt1_dp: String(body.alt1DP ?? 0),
+    alt2_kwp: String(body.alt2Kwp ?? ""),
+    alt2_battery: String(body.alt2Battery ?? 0),
+    alt2_savings: String(body.alt2Savings ?? 0),
+    alt2_coverage: String(body.alt2Coverage ?? 0),
+    alt2_rto: String(body.alt2RTO ?? 0),
+    alt2_dp: String(body.alt2DP ?? 0),
   });
 
   // Fire the webhook in the background so the button responds immediately.
