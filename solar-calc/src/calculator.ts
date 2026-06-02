@@ -415,9 +415,13 @@ export function calculate(inputs: CalcInputs): CalcResult {
     ? Math.min(1, Math.max(0, dayTimeKwh / monthlyConsumptionKwh))
     : 0.5;
 
+  // Classify off the rounded display value so the label always matches the
+  // numbers shown on screen (e.g. 50.4% rounds to "50% day · 50% night" so
+  // we show "Balanced User", not "Day Time User").
+  const dayTimePctRounded = Math.round(dayTimePct * 100);
   let usageProfile: string;
-  if (dayTimePct > 0.5) usageProfile = "Day Time User";
-  else if (dayTimePct < 0.5) usageProfile = "Night Time User";
+  if (dayTimePctRounded > 50) usageProfile = "Day Time User";
+  else if (dayTimePctRounded < 50) usageProfile = "Night Time User";
   else usageProfile = "Balanced User";
 
   // Build 24-hour load profile for hourly simulation (average day, kWh per hour)
@@ -440,7 +444,7 @@ export function calculate(inputs: CalcInputs): CalcResult {
     monthlyConsumptionKwh: Math.round(monthlyConsumptionKwh),
     dayTimeKwh: Math.round(dayTimeKwh),
     nightTimeKwh: Math.round(nightTimeKwh),
-    dayTimePct: Math.round(dayTimePct * 100),
+    dayTimePct: dayTimePctRounded,
     usageProfile,
     starter,
     recommended,
