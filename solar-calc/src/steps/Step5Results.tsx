@@ -353,6 +353,7 @@ export default function Step5Results() {
           dayTimePct: result!.dayTimePct,
           appliances: formData.devices.map((d) => ({
             name: d.deviceName,
+            quantity: d.quantity,
             onTime: `${d.onTimeHour}:${String(d.onTimeMinute).padStart(2, "0")} ${d.onTimeAmPm}`,
             offTime: `${d.offTimeHour}:${String(d.offTimeMinute).padStart(2, "0")} ${d.offTimeAmPm}`,
             daysPerWeek: d.daysPerWeek,
@@ -446,9 +447,9 @@ export default function Step5Results() {
           </div>
         )}
 
-        {/* Section: Recommended System Sizes */}
+        {/* Section: Choose Your Package */}
         <h2 className="text-2xl font-semibold text-brand-blue leading-[30px] mt-4">
-          Recommended System Sizes
+          Choose Your Package
         </h2>
 
         {/* Toggle: Rent-to-Own / Direct Purchase */}
