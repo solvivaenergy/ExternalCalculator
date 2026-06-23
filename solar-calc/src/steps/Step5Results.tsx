@@ -145,6 +145,7 @@ function TierCard({
           </p>
           <p className="text-xs font-medium text-neutral-600 leading-[18px]">
             {tier.label}
+            {tier.batteryKwh === 0 ? " (No Battery)" : ""}
           </p>
         </div>
 

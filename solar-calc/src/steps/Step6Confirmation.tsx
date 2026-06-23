@@ -52,6 +52,7 @@ export default function Step6Confirmation() {
           dayTimePct: result!.dayTimePct,
           appliances: formData.devices.map((d) => ({
             name: d.deviceName,
+            quantity: d.quantity,
             onTime: `${d.onTimeHour}:${String(d.onTimeMinute).padStart(2, "0")} ${d.onTimeAmPm}`,
             offTime: `${d.offTimeHour}:${String(d.offTimeMinute).padStart(2, "0")} ${d.offTimeAmPm}`,
             daysPerWeek: d.daysPerWeek,
@@ -124,7 +125,7 @@ export default function Step6Confirmation() {
             </svg>
           </button>
           <h2 className="text-2xl font-semibold text-brand-blue leading-[30px]">
-            Your System in Detail
+            Your Package in Detail
           </h2>
         </div>
 
@@ -164,6 +165,7 @@ export default function Step6Confirmation() {
               </p>
               <p className="text-xs font-medium text-neutral-600 leading-[18px]">
                 {tier.label}
+                {tier.batteryKwh === 0 ? " (No Battery)" : ""}
               </p>
 
               <div className="mt-6 flex flex-col divide-y divide-neutral-200">
