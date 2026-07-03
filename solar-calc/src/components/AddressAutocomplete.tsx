@@ -15,6 +15,13 @@ interface Prediction {
   secondaryText: string;
 }
 
+export interface PlaceDetailsData {
+  formattedAddress: string;
+  region: string;
+  province: string;
+  city: string;
+}
+
 export default function AddressAutocomplete({
   label,
   placeholder,
@@ -25,7 +32,8 @@ export default function AddressAutocomplete({
   label?: string;
   placeholder?: string;
   value: string;
-  onChange: (value: string) => void;
+  // onChange now accepts either a string (typing) or the rich details object (selection)
+  onChange: (value: string | PlaceDetailsData) => void;
   prefixIcon?: ReactNode;
 }) {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
@@ -37,7 +45,7 @@ export default function AddressAutocomplete({
 
   const ready = Boolean(API_KEY && API_KEY !== "YOUR_KEY_HERE");
 
-  /* Fetch predictions when value changes (Places API New — REST) */
+  /* Fetch predictions when value changes */
   useEffect(() => {
     if (!ready || !value.trim() || suppressFetch.current) {
       suppressFetch.current = false;
@@ -74,26 +82,14 @@ export default function AddressAutocomplete({
           const suggestions = data.suggestions ?? [];
           setPredictions(
             suggestions
-              .filter((s: Record<string, unknown>) => s.placePrediction)
-              .map(
-                (s: {
-                  placePrediction: {
-                    placeId: string;
-                    text: { text: string };
-                    structuredFormat: {
-                      mainText: { text: string };
-                      secondaryText?: { text: string };
-                    };
-                  };
-                }) => ({
-                  placeId: s.placePrediction.placeId,
-                  text: s.placePrediction.text.text,
-                  mainText: s.placePrediction.structuredFormat.mainText.text,
-                  secondaryText:
-                    s.placePrediction.structuredFormat.secondaryText?.text ??
-                    "",
-                }),
-              ),
+              .filter((s: any) => s.placePrediction)
+              .map((s: any) => ({
+                placeId: s.placePrediction.placeId,
+                text: s.placePrediction.text.text,
+                mainText: s.placePrediction.structuredFormat.mainText.text,
+                secondaryText:
+                  s.placePrediction.structuredFormat.secondaryText?.text ?? "",
+              })),
           );
           setOpen(true);
           setActiveIdx(-1);
@@ -123,12 +119,59 @@ export default function AddressAutocomplete({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  /* Fetch Place Details when a prediction is clicked */
   const selectPrediction = useCallback(
-    (p: Prediction) => {
+    async (p: Prediction) => {
       suppressFetch.current = true;
-      onChange(p.text);
       setPredictions([]);
       setOpen(false);
+
+      // Optimistically update the input text immediately
+      onChange(p.text);
+
+      try {
+        // Fetch the rich address components from the Place Details endpoint
+        const response = await fetch(
+          `https://places.googleapis.com/v1/places/${p.placeId}`,
+          {
+            headers: {
+              "X-Goog-Api-Key": API_KEY,
+              // We only request the exact fields we need to save bandwidth/costs
+              "X-Goog-FieldMask": "addressComponents,formattedAddress",
+            },
+          },
+        );
+        const data = await response.json();
+
+        let region = "";
+        let province = "";
+        let city = "";
+
+        // Parse the New Places API structure
+        if (data.addressComponents) {
+          data.addressComponents.forEach((comp: any) => {
+            if (comp.types.includes("administrative_area_level_1")) {
+              region = comp.longText;
+            }
+            if (comp.types.includes("administrative_area_level_2")) {
+              province = comp.longText;
+            }
+            if (comp.types.includes("locality")) {
+              city = comp.longText;
+            }
+          });
+        }
+
+        // Pass the rich object up to the parent
+        onChange({
+          formattedAddress: data.formattedAddress || p.text,
+          region,
+          province,
+          city,
+        });
+      } catch (error) {
+        console.error("Error fetching place details:", error);
+      }
     },
     [onChange],
   );
@@ -165,6 +208,7 @@ export default function AddressAutocomplete({
           className="flex-1 h-full px-3.5 text-base font-medium text-neutral-800 placeholder:text-neutral-400 outline-none bg-transparent leading-6"
           placeholder={placeholder}
           value={value}
+          // If the user manually types, pass the raw string
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => predictions.length > 0 && setOpen(true)}
           onKeyDown={handleKeyDown}
