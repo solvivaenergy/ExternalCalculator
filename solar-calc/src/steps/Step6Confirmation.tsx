@@ -214,7 +214,7 @@ export default function Step6Confirmation() {
               <li>Tier 1 Solar Panels</li>
               <li>Inverter and mounting system</li>
               {tier.batteryKwh > 0 && (
-                <li>{tier.batteryKwh}kW battery storage</li>
+                <li>{tier.batteryKwh}kWh battery storage</li>
               )}
               <li>Installation and permits</li>
               <li>25-year warranty</li>
