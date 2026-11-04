@@ -11,7 +11,20 @@ zone_name = "solvivaenergy.com"
 pattern   = "www.solvivaenergy.com/calculator*"
 zone_name = "solvivaenergy.com"
 
+# ── Which Odoo receives calculator leads ─────────────────────────────────────
+# "staging"    → posts to the ODOO_LEAD_WEBHOOK_URL_STAGING secret
+# "production" → posts to the ODOO_LEAD_WEBHOOK_URL secret
+# At launch: change this to "production", then `npx wrangler deploy`.
+[vars]
+ODOO_TARGET = "staging"
+
 # ── Secrets — DO NOT put real values here. Set them with the CLI: ─────────────
+#
+#   npx wrangler secret put ODOO_LEAD_WEBHOOK_URL
+#     Production Odoo webhook URL (https://<prod host>/web/hook/<uuid>).
+#
+#   npx wrangler secret put ODOO_LEAD_WEBHOOK_URL_STAGING
+#     The same webhook on Odoo staging.
 #
 #   npx wrangler secret put PASSWORD_HASH
 #     Paste the SHA-256 hex of your password (64 lowercase hex chars).

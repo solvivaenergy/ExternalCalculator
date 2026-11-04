@@ -17,6 +17,17 @@
  *   wrangler secret put ORIGIN_URL
  *     → your GitHub Pages base URL, e.g. https://yourusername.github.io/repo-name
  *
+ *   wrangler secret put ODOO_LEAD_WEBHOOK_URL
+ *     → the PRODUCTION Odoo webhook (…/web/hook/<uuid>) that creates the lead
+ *
+ *   wrangler secret put ODOO_LEAD_WEBHOOK_URL_STAGING
+ *     → the same webhook on Odoo STAGING
+ *
+ * ── Odoo target ────────────────────────────────────────────────────────────
+ *   ODOO_TARGET (plain var in wrangler.toml, "staging" or "production") picks
+ *   which of the two webhook secrets /calculator/api/send-estimate posts to.
+ *   Flip it to "production" at launch and run `npx wrangler deploy`.
+ *
  * ── Session ────────────────────────────────────────────────────────────────
  *   Sessions last 8 hours. Cookie is HttpOnly + Secure + SameSite=Strict.
  *   Token is HMAC-SHA256 signed — cannot be forged without HMAC_SECRET.
@@ -70,16 +81,33 @@ export default {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Send estimate → Odoo CRM webhook
-// Required secret: ODOO_LEAD_WEBHOOK_URL
-//   wrangler secret put ODOO_LEAD_WEBHOOK_URL
-//   → https://solvivaenergy-sh.odoo.com/web/hook/a6d7b50b-ab00-44b9-a9b0-28ccada012b4
+// Secrets: ODOO_LEAD_WEBHOOK_URL (production), ODOO_LEAD_WEBHOOK_URL_STAGING
+// Var:     ODOO_TARGET in wrangler.toml selects which one is used.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** "staging" or "production" — anything other than "staging" means production. */
+function odooTarget(env) {
+  return String(env.ODOO_TARGET ?? "production").toLowerCase() === "staging"
+    ? "staging"
+    : "production";
+}
+
+function odooWebhookUrl(env) {
+  return odooTarget(env) === "staging"
+    ? env.ODOO_LEAD_WEBHOOK_URL_STAGING
+    : env.ODOO_LEAD_WEBHOOK_URL;
+}
+
 async function handleSendEstimate(request, env, ctx) {
-  const webhookUrl = env.ODOO_LEAD_WEBHOOK_URL;
+  const target = odooTarget(env);
+  const webhookUrl = odooWebhookUrl(env);
+  const webhookHost = webhookUrl ? new URL(webhookUrl).host : "";
   if (!webhookUrl) {
+    console.error(
+      `[send-estimate] no webhook secret set for ODOO_TARGET=${target}`,
+    );
     return new Response(
-      JSON.stringify({ ok: false, error: "not configured" }),
+      JSON.stringify({ ok: false, error: "not configured", target }),
       {
         status: 503,
         headers: { "Content-Type": "application/json" },
@@ -110,6 +138,21 @@ async function handleSendEstimate(request, env, ctx) {
   }
 
   // Build the payload matching the existing Meta-to-CRM field schema
+  const debugFingerprint = {
+    email: body.email ?? "",
+    city: body.city ?? "",
+    propertyType: body.propertyType ?? "",
+    installTimeline: body.installTimeline ?? "",
+    homeOwnership: body.homeOwnership ?? "",
+    purchaseMode: body.purchaseMode ?? "",
+    packageType: body.packageType ?? "",
+    waitlistReason: body.waitlistReason ?? "",
+    continuedFromArea: !!body.continuedFromArea,
+    continuedWithDQReason: body.continuedWithDQReason ?? "",
+    webhookHost,
+    target,
+  };
+
   const payload = JSON.stringify({
     first_name: body.firstName ?? "",
     last_name: body.lastName ?? "",
@@ -144,6 +187,12 @@ async function handleSendEstimate(request, env, ctx) {
     purchase_mode: body.purchaseMode ?? "",
     price_rto: String(body.priceRTO ?? ""),
     price_dp: String(body.priceDP ?? ""),
+    monthly_payment_rto: String(body.monthlyPaymentRTO ?? 0),
+    monthly_savings: String(body.monthlySavings ?? 0),
+    day_time_pct: String(body.dayTimePct ?? 0),
+    appliances: body.appliances ?? [],
+    package_type: body.packageType ?? "",
+    dq_reason: body.continuedWithDQReason ?? "",
     // Alternative packages — only populated when user selects Energy Independence
     alt1_kwp: String(body.alt1Kwp ?? ""),
     alt1_savings: String(body.alt1Savings ?? 0),
@@ -158,25 +207,41 @@ async function handleSendEstimate(request, env, ctx) {
     alt2_dp: String(body.alt2DP ?? 0),
   });
 
-  // Fire the webhook in the background so the button responds immediately.
-  // ctx.waitUntil keeps the Worker alive until the Odoo call finishes.
-  ctx.waitUntil(
-    fetch(webhookUrl, {
+  // Await the Odoo webhook so failures are surfaced to the client.
+  let odooRes;
+  try {
+    odooRes = await fetch(webhookUrl, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "SolvivaCalculator/1.0",
+      },
       body: payload,
-    })
-      .then((res) => {
-        if (!res.ok) {
-          console.error(`[send-estimate] Odoo webhook returned ${res.status}`);
-        }
-      })
-      .catch((err) => {
-        console.error(`[send-estimate] Odoo webhook fetch failed: ${err}`);
-      }),
-  );
+    });
+  } catch (err) {
+    console.error(`[send-estimate] Odoo webhook fetch failed: ${err}`);
+    return new Response(
+      JSON.stringify({ ok: false, error: "upstream_error", target }),
+      { status: 502, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
-  return new Response(JSON.stringify({ ok: true }), {
+  if (!odooRes.ok) {
+    const odooBody = await odooRes.text().catch(() => "");
+    console.error(
+      `[send-estimate] Odoo (${target}) webhook returned ${odooRes.status}: ${odooBody.slice(0, 500)}`,
+    );
+    console.error(
+      `[send-estimate] request fingerprint: ${JSON.stringify(debugFingerprint)}`,
+    );
+    return new Response(
+      JSON.stringify({ ok: false, error: `odoo_${odooRes.status}`, target }),
+      { status: 502, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // `target` tells the page which Odoo received the lead (shown during UAT).
+  return new Response(JSON.stringify({ ok: true, target }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });
