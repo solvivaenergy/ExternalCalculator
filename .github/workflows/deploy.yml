@@ -1,8 +1,18 @@
-name: Deploy Solar Calc to GitHub Pages
+name: Deploy calculator site to GitHub Pages
+
+# Publishes the static page in `site/` to GitHub Pages. The Cloudflare Worker in
+# `cloudflare-worker/` sits in front of it at solvivaenergy.com/calculator and
+# enforces the password gate before proxying here.
+#
+# The previous React build (solar-calc) is retired under `archive/` and is no
+# longer deployed. See archive/README.md.
 
 on:
   push:
     branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -15,41 +25,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: solar-calc/package-lock.json
-
-      - name: Install dependencies
-        working-directory: solar-calc
-        run: npm ci
-
-      - name: Build
-        working-directory: solar-calc
-        run: npm run build
-        env:
-          VITE_GOOGLE_MAPS_API_KEY: ${{ secrets.VITE_GOOGLE_MAPS_API_KEY }}
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: solar-calc/dist
-
   deploy:
-    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
