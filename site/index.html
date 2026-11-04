@@ -631,6 +631,7 @@ const net=(list,pct)=>Math.round((list-Math.round(list*pct*100)/100)*100)/100;
    down-payment and term combination matches the calculator to the peso. */
 const RFAC={12:{0:.0955909743,.1:.0855397829,.2:.0755509223,.3:.0656424659,.4:.0558322752,.5:.0460782891},24:{0:.0541902997,.1:.0482604446,.2:.0424467583,.3:.0366613142,.4:.031015893,.5:.0254173793},36:{0:.0408923055,.1:.0362615585,.2:.0317549959,.3:.027325359,.4:.0229919442,.5:.0187414013},48:{0:.0345666403,.1:.0305992934,.2:.02669330,.3:.0228696849,.4:.0191898148,.5:.0155838744},60:{0:.0311358207,.1:.0274817947,.2:.0238932096,.3:.0204434569,.4:.0170870886,.5:.013809456}};
 let dpSel=0, termSel=60, goalApplied=false;
+let EST_OUT=null; // what the estimate screen last showed; leadPayload() sends it to Odoo
 const RTO=list=>{const cash=net(list,PROMO.cash.pct), fin=net(list,PROMO.rto.pct), dp=fin*dpSel, m=fin*RFAC[termSel][dpSel];return {list,cash,fin,dp,rto:m,total:dp+m*termSel};};
 const TERMS=[[12,.2613],[24,.2663],[36,.2713],[48,.275],[60,.28]];
 const peso=v=>"₱"+Math.round(v).toLocaleString("en-PH");
@@ -796,13 +797,15 @@ function applyGoal(d){
   goalApplied=true;
 }
 /* appliance hours win over the quick day/evening answer */
+let lastNightShare=null; // night share of use from the appliance hours; null when no appliances are selected
 function impliedUsage(){
-  const on=APPS.map((a,i)=>i).filter(i=>$("ap"+i).checked); if(!on.length) return null;
+  const on=APPS.map((a,i)=>i).filter(i=>$("ap"+i).checked); if(!on.length){lastNightShare=null; return null;}
   let day=0,night=0;
   on.forEach(i=>{const a=APPS[i],s=$("row"+i).querySelectorAll(".ctl select"),vi=a.v?s[0].selectedIndex:0,n=a.count?+s[1].value:1,kw=SPEC[i](vi)[0]*n;
     const [f,to,dd]=rng(i); for(let h=0;h<24;h++){const run=to>f?(h>=f&&h<to):(h>=f||h<to); if(run){if(h>=6&&h<18)day+=kw*dd/7; else night+=kw*dd/7;}}});
   const bs=billSel(), kwh=(bs.typed||bs.use)/(+$("rate").value||16), app=(day+night)*30, base=Math.max(kwh-app,0)/2;
   const tot=base*2+app, nightShare=(base+night*30)/tot;
+  lastNightShare=nightShare;
   return nightShare>0.58?"evening":nightShare<0.42?"day":"even";
 }
 function renderResults(){
@@ -831,6 +834,7 @@ function renderResults(){
   $("mock").textContent=changes.length?`Prototype: prices update as you change panels or battery. The live version also recalculates coverage and savings with ${changes.length>2?changes.slice(0,-1).join(", ")+", and "+changes[changes.length-1]:changes.join(" and ")}. Coverage and savings below are the standard estimate.`:((pAdj!==null&&pAdj!==d.panels)||(withB&&bAdj!==null&&bAdj!==d.b.kwh)?(live15?"Prototype: prices, coverage, and your bill after solar reflect your changes (₱15,000 bill only). Payback and 25-year figures update in the live version.":"Prototype: prices reflect your changes. Coverage and savings update in the live version, and in this prototype for the ₱15,000 bill."):"");
   $("mock").classList.toggle("hidden",!$("mock").textContent);
   const saveM=Math.max(0,Math.round(((sel.typed||bill)-p.after)/100)*100);
+  EST_OUT={pe,be,withB,solar:s,batt:bt,cov:tot,save:saveM,rto:p.rto,cash:p.cash,total:p.total,dp:p.dp,after:p.after};
   $("headline").textContent=`Save about ${peso(saveM)} a month`;
   const gl=val("goal"), exG=EXTRA[bill][withB?"b":"n"];
   $("sub").textContent={bill:"We’ve sized your system to bring your bill as close to zero as we can.",payback:`On a direct purchase, your system pays for itself in about ${exG[1]}.`,value:`From ${peso(p.rto)} a month with rent-to-own, or ${peso(p.cash)} if you pay in full.`,backup:"Your battery keeps your chosen appliances running during brownouts."}[gl]||"";
@@ -911,8 +915,8 @@ function show(s,push=true){
 }
 $("next").onclick=()=>{
   const e=valid(cur);
-  if(cur==="wait"){finishWait();return;}
   if(e){$("err").textContent=e;$("err").classList.remove("hidden");return;}
+  if(cur==="wait"){finishWait();return;}
   if(cur==="results"){ show("book"); return;}
   if(cur==="book"){finish();return;}
   show(FLOW[FLOW.indexOf(cur)+1]);
@@ -955,10 +959,11 @@ function shareEst(){
   (navigator.clipboard?navigator.clipboard.writeText(txt+" "+location.href):Promise.reject()).then(()=>{$("err").textContent="Copied. Paste it into a message to the homeowner.";$("err").classList.remove("hidden");$("err").style.color="var(--ok)";}).catch(()=>{});
 }
 function toWait(){ $("where").value=$("elseIn").value; $("shareWrap").classList.toggle("hidden",disq().r!=="rent");const q=disq(),c=DQ[q.r](q);$("waitH").textContent=c.h;$("waitLead").textContent=c.lead;$("whereWrap").classList.toggle("hidden",true);show("wait");}
-function finishWait(){
+async function finishWait(){
+  const sent=await sendLead(leadPayload("waitlist")); if(!sent) return;
   const q=disq(),c=DQ[q.r](q);
   $("doneH").textContent=c.doneH; $("doneMsg").textContent=c.done;
-  $("route").textContent=c.route+" (Shown in the prototype only.)";
+  $("route").textContent=c.route+` (Sent to Odoo ${sent.target||"production"}.)`;
   hist.length=0; show("done",false);
 }
 function finishWaitOld(){
@@ -968,7 +973,56 @@ function finishWaitOld(){
   $("route").textContent=`Route: expansion waitlist, not an MQL. Odoo gets Installation Province: ${outProv||"(typed) "+place}${$("city").value?", City: "+$("city").value:""}. (Shown in the prototype only.)`;
   hist.length=0; show("done",false);
 }
-function finish(){
+/* ── Send the lead to Odoo ──────────────────────────────────────────────────
+   POSTs to the Cloudflare Worker at /calculator/api/send-estimate. The Worker maps
+   these fields onto the Odoo "API - Create lead" webhook and decides whether the
+   lead goes to Odoo staging or production (ODOO_TARGET in cloudflare-worker/wrangler.toml).
+   Field names and option strings match what the previous calculator sent, so Odoo
+   reuses its existing Solar Timeline / Type of Home values. */
+const LEAD_API="/calculator/api/send-estimate";
+const WHEN_TXT={month:"Within the month","2m":"Within the next 2 months","6m":"Within the next 6 months",later:"Interested and not urgent"};
+const phoneE164=raw=>{const d=raw.replace(/\D/g,"");if(d.length===11&&d[0]==="0")return "+63"+d.slice(1);if(d.length===12&&d.startsWith("63"))return "+"+d;if(d.length===10&&d[0]==="9")return "+63"+d;return raw.trim();};
+function placeForOdoo(){ // "City, Province" — Odoo stores it as "Province ~ City"
+  const prov=$("area").value&&$("area").value!=="other"?$("area").value:outProv, city=$("city").value;
+  if(city&&prov) return `${city}, ${prov}`;
+  return prov||city||$("elseIn").value.trim()||$("where").value.trim();
+}
+function applianceList(){
+  return APPS.map((a,i)=>{ if(!$("ap"+i).checked) return null;
+    const s=$("row"+i).querySelectorAll(".ctl select"), vi=a.v?s[0].selectedIndex:0, n=a.count?+s[1].value:1, [f,to,d]=rng(i), t=h=>HL(h).replace(" ",":00 ");
+    return {name:a.v?`${a.n} (${a.v[vi]})`:a.n, quantity:n, onTime:t(f), offTime:t(to), daysPerWeek:d}; }).filter(Boolean);
+}
+function dayPct(){ // from the appliance hours when given; otherwise a rough figure from the day/evening answer
+  if(impliedUsage()!==null&&lastNightShare!==null) return Math.round((1-lastNightShare)*100);
+  return {day:60,even:50,evening:40}[val("usage")]||0;
+}
+function leadPayload(kind){ // kind: "estimate" (book screen) or "waitlist" (wait screen)
+  const w=kind==="waitlist", name=$(w?"wfn":"fn").value.trim().split(/\s+/), bs=billSel(), own=val("own"), dq=disq();
+  const p={firstName:name[0]||"", lastName:name.slice(1).join(" "), email:$(w?"wem":"em").value.trim(), phone:phoneE164($(w?"wmb":"mb").value),
+    monthlyBill:String(bs.typed||bs.use), city:placeForOdoo(), propertyType:own==="condo"?"Condo":"Detached house", homeOwnership:own==="rent"?"No":"Yes",
+    installTimeline:w?"":(WHEN_TXT[val("when")]||"")};
+  if(w){ p.waitlistReason=dq?(dq.r==="out"?"area":dq.r==="rent"?"renter":"condo"):"other"; return p; }
+  const E=EST_OUT||{};
+  Object.assign(p,{kwpLabel:+((E.pe||0)*PANEL_KWP).toFixed(2), batteryKwh:E.withB?E.be:0, coveragePct:E.cov||0, purchaseMode:"rto",
+    priceRTO:Math.round(E.total||0), priceDP:Math.round(E.cash||0), monthlyPaymentRTO:Math.round(E.rto||0), monthlySavings:E.save||0,
+    dayTimePct:dayPct(), appliances:applianceList(), packageType:E.withB?"recommended":"starter"});
+  if(dq){ if(dq.r==="out"){p.continuedFromArea=true; p.continuedWithDQReason="area";} else p.continuedWithDQReason=dq.r==="rent"?"renter":"condo"; }
+  return p;
+}
+async function sendLead(payload){
+  const btn=$("next"), label=btn.textContent; btn.disabled=true; btn.textContent="Sending…"; $("err").classList.add("hidden"); $("err").style.color="";
+  try{
+    const r=await fetch(LEAD_API,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok) throw new Error(j.error||("HTTP "+r.status));
+    return j; // {ok:true, target:"staging"|"production"}
+  }catch(err){
+    $("err").textContent="We couldn’t send your estimate. Please check your connection and try again."; $("err").classList.remove("hidden");
+    return null;
+  }finally{ btn.disabled=false; btn.textContent=label; }
+}
+async function finish(){
+  const sent=await sendLead(leadPayload("estimate")); if(!sent) return;
   const bs=billSel(), bill=bs.typed||bs.use, own=val("own"), when=val("when");
   $("doneH").textContent="Your estimate is on its way";
   $("doneMsg").textContent="Check your inbox. A Solviva Expert may also reach out to walk you through it.";
@@ -978,7 +1032,8 @@ function finish(){
   else if(bill<10000) r="Route: nurture. Bill under the ₱10,000 MQL threshold.";
   else if(when==="later") r="Route: nurture sequence. Qualifies, but no near-term timeline.";
   else r="Route: MQL, straight to Sales in Odoo with the estimate, answers, and UTM source.";
-  $("route").textContent=dq?r+" (Shown in the prototype only.)":r+` Odoo gets City: ${$("city").value||"(none)"}, Installation Province: ${$("area").value}. (Shown in the prototype only.)`;
+  const tag=` (Sent to Odoo ${sent.target||"production"}.)`;
+  $("route").textContent=dq?r+tag:r+` Odoo gets City: ${$("city").value||"(none)"}, Installation Province: ${$("area").value}.`+tag;
   hist.length=0; show("done",false);
 }
 show("bill",false);
