@@ -38,6 +38,7 @@ const SESSION_HOURS = 8;
 const LOGIN_PATH = "/calculator/_login";
 const CALC_PREFIX = "/calculator";
 const SEND_ESTIMATE_PATH = "/calculator/api/send-estimate";
+const HEALTH_PATH = "/calculator/api/health";
 
 export default {
   async fetch(request, env, ctx) {
@@ -67,6 +68,23 @@ export default {
     // ── API: submit calculator lead to Odoo CRM (no auth required) ──────────
     if (request.method === "POST" && url.pathname === SEND_ESTIMATE_PATH) {
       return handleSendEstimate(request, env, ctx);
+    }
+
+    // ── Health: which Odoo receives leads right now (creates nothing) ──────
+    if (request.method === "GET" && url.pathname === HEALTH_PATH) {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          target: odooTarget(env),
+          configured: Boolean(odooWebhookUrl(env)),
+        }),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+          },
+        },
+      );
     }
 
     // ── Auth check ────────────────────────────────────────────────────────

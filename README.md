@@ -41,6 +41,10 @@ returning `odoo_404`, re-read the UUID from the rule and set the secret again.
 confirmation screen's routing line names the Odoo that received the lead, so
 testers can see which one they hit.
 
+**Check what is live** without creating a lead:
+`https://www.solvivaenergy.com/calculator/api/health` returns
+`{"ok":true,"target":"staging"|"production","configured":true}`.
+
 ## Password gate
 
 The gate lives entirely in `cloudflare-worker/src/worker.js`. Its secrets
