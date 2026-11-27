@@ -26,6 +26,10 @@ ODOO_TARGET = "staging"
 #   npx wrangler secret put ODOO_LEAD_WEBHOOK_URL_STAGING
 #     The same webhook on Odoo staging.
 #
+#   npx wrangler secret put GOOGLE_PLACES_API_KEY
+#     Google Maps key with "Places API (New)" enabled, for the city field
+#     (/calculator/api/places/*). Restricted to the solvivaenergy.com referrer.
+#
 #   npx wrangler secret put PASSWORD_HASH
 #     Paste the SHA-256 hex of your password (64 lowercase hex chars).
 #     Quick way to generate it (Linux/Mac):

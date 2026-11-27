@@ -23,6 +23,11 @@
  *   wrangler secret put ODOO_LEAD_WEBHOOK_URL_STAGING
  *     → the same webhook on Odoo STAGING
  *
+ *   wrangler secret put GOOGLE_PLACES_API_KEY
+ *     → the Google Maps key with "Places API (New)" enabled, used by the city
+ *       field (/calculator/api/places/*). It is restricted in Google Cloud to
+ *       the solvivaenergy.com referrer, which the Worker sends (PLACES_REFERER).
+ *
  * ── Odoo target ────────────────────────────────────────────────────────────
  *   ODOO_TARGET (plain var in wrangler.toml, "staging" or "production") picks
  *   which of the two webhook secrets /calculator/api/send-estimate posts to.
@@ -39,6 +44,10 @@ const LOGIN_PATH = "/calculator/_login";
 const CALC_PREFIX = "/calculator";
 const SEND_ESTIMATE_PATH = "/calculator/api/send-estimate";
 const HEALTH_PATH = "/calculator/api/health";
+const PLACES_PREFIX = "/calculator/api/places/";
+const GOOGLE_PLACES = "https://places.googleapis.com/v1/places";
+// The Google key only accepts requests from this referrer.
+const PLACES_REFERER = "https://solvivaenergy.com/calculator";
 
 export default {
   async fetch(request, env, ctx) {
@@ -77,6 +86,7 @@ export default {
           ok: true,
           target: odooTarget(env),
           configured: Boolean(odooWebhookUrl(env)),
+          places: Boolean(env.GOOGLE_PLACES_API_KEY),
         }),
         {
           headers: {
@@ -84,6 +94,18 @@ export default {
             "Cache-Control": "no-store",
           },
         },
+      );
+    }
+
+    // ── API: Google Places for the city field (signed-in visitors only) ────
+    if (url.pathname.startsWith(PLACES_PREFIX)) {
+      if (!(await isAuthenticated(request, env))) {
+        return json({ ok: false, error: "unauthorized" }, 401);
+      }
+      return handlePlaces(
+        request,
+        env,
+        url.pathname.slice(PLACES_PREFIX.length),
       );
     }
 
@@ -262,6 +284,120 @@ async function handleSendEstimate(request, env, ctx) {
   return new Response(JSON.stringify({ ok: true, target }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Google Places (New) for the city field
+// Secret: GOOGLE_PLACES_API_KEY. The key stays here; the page never sees it.
+//
+//   POST /calculator/api/places/autocomplete  { input, session }
+//     → { ok, suggestions: [{ placeId, text, main, secondary }] }
+//   POST /calculator/api/places/details       { placeId, session }
+//     → { ok, city, province, region }   (from the place's address components)
+//
+// `session` is the Places session token: the page sends the same one for every
+// keystroke and for the details call that ends the search, so Google bills the
+// whole search as one session.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+  });
+}
+
+async function handlePlaces(request, env, action) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "method not allowed" }, 405);
+  }
+  const key = env.GOOGLE_PLACES_API_KEY;
+  if (!key) return json({ ok: false, error: "not configured" }, 503);
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ ok: false, error: "invalid JSON" }, 400);
+  }
+  const session = /^[A-Za-z0-9_-]{8,64}$/.test(body.session ?? "")
+    ? body.session
+    : undefined;
+  const headers = { "X-Goog-Api-Key": key, Referer: PLACES_REFERER };
+
+  let res;
+  try {
+    if (action === "autocomplete") {
+      const input = String(body.input ?? "").trim().slice(0, 120);
+      if (input.length < 2) return json({ ok: true, suggestions: [] });
+      res = await fetch(`${GOOGLE_PLACES}:autocomplete`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          input,
+          sessionToken: session,
+          languageCode: "en",
+          regionCode: "ph",
+          includedRegionCodes: ["ph"],
+          includedPrimaryTypes: ["geocode"],
+          // Prefer the service area (Greater Manila, CALABARZON, Central Luzon)
+          locationBias: {
+            rectangle: {
+              low: { latitude: 13.3, longitude: 120.3 },
+              high: { latitude: 15.2, longitude: 122.5 },
+            },
+          },
+        }),
+      });
+    } else if (action === "details") {
+      const placeId = String(body.placeId ?? "");
+      if (!/^[A-Za-z0-9_-]{10,300}$/.test(placeId)) {
+        return json({ ok: false, error: "invalid placeId" }, 400);
+      }
+      const qs = new URLSearchParams({ languageCode: "en", regionCode: "ph" });
+      if (session) qs.set("sessionToken", session);
+      res = await fetch(`${GOOGLE_PLACES}/${placeId}?${qs}`, {
+        headers: { ...headers, "X-Goog-FieldMask": "addressComponents" },
+      });
+    } else {
+      return json({ ok: false, error: "not found" }, 404);
+    }
+  } catch (err) {
+    console.error(`[places] ${action} fetch failed: ${err}`);
+    return json({ ok: false, error: "upstream_error" }, 502);
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    console.error(
+      `[places] ${action} returned ${res.status}: ${data.error?.message ?? ""}`,
+    );
+    return json({ ok: false, error: `google_${res.status}` }, 502);
+  }
+
+  if (action === "autocomplete") {
+    const suggestions = (data.suggestions ?? [])
+      .filter((s) => s.placePrediction)
+      .map(({ placePrediction: p }) => ({
+        placeId: p.placeId,
+        text: p.text?.text ?? "",
+        main: p.structuredFormat?.mainText?.text ?? p.text?.text ?? "",
+        secondary: p.structuredFormat?.secondaryText?.text ?? "",
+      }));
+    return json({ ok: true, suggestions });
+  }
+
+  // Details: city = locality; province = admin level 2 (Metro Manila has none,
+  // it is the level-1 region); region = admin level 1.
+  const part = (type) =>
+    (data.addressComponents ?? []).find((c) => c.types?.includes(type))
+      ?.longText ?? "";
+  return json({
+    ok: true,
+    city: part("locality") || part("administrative_area_level_3"),
+    province: part("administrative_area_level_2"),
+    region: part("administrative_area_level_1"),
   });
 }
 

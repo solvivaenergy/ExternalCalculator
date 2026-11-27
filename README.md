@@ -43,7 +43,22 @@ testers can see which one they hit.
 
 **Check what is live** without creating a lead:
 `https://www.solvivaenergy.com/calculator/api/health` returns
-`{"ok":true,"target":"staging"|"production","configured":true}`.
+`{"ok":true,"target":"staging"|"production","configured":true,"places":true}`.
+
+## City field (Google Places)
+
+The "City or municipality" field shows Google Places suggestions (addresses,
+villages, cities). Picking one fetches the place's address components and the
+page maps its city and province onto the coverage lists in `site/index.html`
+(`CITIES`, `OUT_CITY`, `OUT_PROV`), so Odoo still receives "City, Province".
+
+The page never holds the Google key. It calls the Worker at
+`/calculator/api/places/autocomplete` and `/calculator/api/places/details`
+(signed-in visitors only), and the Worker calls Places API (New) with the
+`GOOGLE_PLACES_API_KEY` secret. That key is restricted in Google Cloud to the
+solvivaenergy.com referrer, which the Worker sends. If the Worker or Google
+cannot be reached, the field falls back to the built-in city list.
+`/calculator/api/health` shows `"places":true` once the secret is set.
 
 ## Password gate
 

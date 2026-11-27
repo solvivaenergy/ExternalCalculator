@@ -263,7 +263,9 @@ h1{font-weight:800;letter-spacing:-0.015em;color:#006ac6}
 #cityList li{padding:10px 12px;border-radius:10px;cursor:pointer;font-size:16px;display:flex;justify-content:space-between;gap:10px}
 #cityList li small{color:var(--muted);font-size:13px}
 #cityList li.hi,#cityList li:hover{background:var(--sage)}
-#cityList li:last-child{border-top:1px solid var(--line);margin-top:4px;border-radius:0 0 10px 10px}
+#cityList li small{text-align:right}
+#cityList li.alt:not(:first-child){border-top:1px solid var(--line);margin-top:4px;border-radius:0 0 10px 10px}
+#cityList li.pg,#cityList li.pg:hover{justify-content:flex-end;padding:6px 12px 2px;font-size:12px;color:var(--muted);background:none;cursor:default}
 .baedit{font-size:12.5px;padding:0 0 0 6px;font-weight:700}
 .baform{margin-top:12px;padding:14px;border-radius:14px;background:var(--onbar)}
 .dptog{margin-top:10px;font-size:14px}
@@ -701,28 +703,81 @@ const CITY_ALL=Object.entries(CITIES).flatMap(([p,cs])=>cs.map(c=>({c,p})))
   .concat(OUT_PROV.map(p=>({c:"",p,out:true})));
 const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim();
 let cityHi=-1, outProv="";
-function cityRender(){const q=norm($("cityIn").value), ul=$("cityList");
-  let m=q?CITY_ALL.filter(x=>(x.c&&(norm(x.c).startsWith(q)||norm(x.c).includes(" "+q)))||norm(x.p).startsWith(q)).sort((a,b)=>((a.out?2:0)+(a.c&&norm(a.c).startsWith(q)?0:1))-((b.out?2:0)+(b.c&&norm(b.c).startsWith(q)?0:1))):[];
-  m=m.slice(0,6);
-  const raw=$("cityIn").value.trim();
-  const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-  const items=m.map(x=>({label:x.c||x.p,sub:x.out?(x.c?x.p:"Province"):x.p,val:x})).concat([raw&&!m.length?{label:`Use “${esc(raw)}”`,sub:"Use what you typed",val:"other",raw}:{label:"Somewhere else",sub:"Type your location",val:"other",raw:""}]);
-  ul.innerHTML=items.map((it,k)=>`<li role="option" id="co${k}" data-k="${k}" class="${k===cityHi?"hi":""}">${it.label}<small>${it.sub}</small></li>`).join("");
-  ul._items=items; ul.classList.toggle("hidden",!q&&document.activeElement!==$("cityIn")); $("cityIn").setAttribute("aria-expanded",!ul.classList.contains("hidden"));}
-function cityPick(it){const ul=$("cityList");
-  if(it==="other"||it.val==="other"){const r=(it&&it.raw)||"";$("cityIn").value=r||"Somewhere else";$("area").value="other";$("city").value="";outProv="";$("elseIn").value=r;}
+/* City field. Suggestions come from Google Places through the Worker (/calculator/api/places/*, which
+   holds the key). Picking one fetches the place's address parts and gResolve() maps its city and province
+   onto the coverage lists above, so Odoo gets the same names as before. If the Worker or Google can't be
+   reached, the field falls back to the built-in list. */
+const PLACES_API="/calculator/api/places/";
+let gOff=false, gItems=null, gSeq=0, gTimer=0, gSess="", cityWait=null;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const gPost=async(action,body)=>{const r=await fetch(PLACES_API+action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});const j=await r.json();if(!r.ok||!j.ok)throw new Error(j.error||r.status);return j;};
+function gQuery(){const seq=++gSeq, raw=$("cityIn").value.trim(); clearTimeout(gTimer);
+  if(gOff)return;
+  if(raw.length<2){gItems=null;return;}
+  gTimer=setTimeout(()=>{
+    gSess=gSess||(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2,12));
+    gPost("autocomplete",{input:raw,session:gSess}).then(j=>{if(seq===gSeq)gItems=j.suggestions;},()=>{if(seq===gSeq)gOff=true;})
+      .then(()=>{if(seq===gSeq&&document.activeElement===$("cityIn")){cityHi=0;cityRender();}});
+  },250);}
+/* "Makati City", "City of Santa Rosa" and "Makati" are the same place */
+const cityKey=s=>norm(s).replace(/^city of /,"").replace(/ city$/,"").replace(/[^a-z0-9]+/g," ").trim();
+function gResolve(d){ // {city, province, region} from Google -> {area, city, prov} as the built-in list would set them
+  const same=(list,v)=>(list||[]).find(x=>cityKey(x)===cityKey(v));
+  let city=(d.city||"").replace(/^City of /i,"").trim();
+  let prov=/metro manila|national capital/.test(norm(`${d.region} ${d.province}`))?"Metro Manila":(d.province||"").trim();
+  if(!prov&&city){const m=CITY_ALL.filter(x=>x.c&&cityKey(x.c)===cityKey(city)); if(m.length===1)prov=m[0].p;}
+  const cov=Object.keys(CITIES).find(p=>norm(p)===norm(prov));
+  if(cov){
+    const out=same(OUT_CITY[cov],city); if(city&&out)return {area:"other",city:out,prov:cov}; // e.g. the Polillo islands of Quezon
+    return city?{area:cov,city:same(CITIES[cov],city)||city,prov:""}:null; // a province alone is not enough
+  }
+  if(!prov)return null;
+  prov=OUT_PROV.find(p=>norm(p)===norm(prov))||prov;
+  return {area:"other",city:(city&&same(OUT_CITY[prov],city))||city,prov};
+}
+function gPick(s){const seq=++gSeq; clearTimeout(gTimer); gItems=null;
+  $("cityIn").value=s.text.replace(/,\s*Philippines$/,""); $("area").value="";$("city").value="";outProv="";
+  cityDone(false);
+  const sess=gSess; gSess=""; // the details call ends the Places session
+  const p=gPost("details",{placeId:s.placeId,session:sess}).then(d=>{if(seq!==gSeq)return;
+    const r=gResolve(d);
+    if(!r){cityErr("We couldn’t tell the city from that. Choose a city or municipality, for example Bacoor, Cavite.");return;}
+    $("area").value=r.area;$("city").value=r.city;outProv=r.prov;
+    $("cityIn").value=[r.city,r.prov||(r.area!=="other"?r.area:"")].filter(Boolean).join(", ");
+    cityDone(false);
+  },()=>{if(seq!==gSeq)return; gOff=true; cityErr("We couldn’t look that place up. Type your city or municipality and choose it from the list.");})
+  .finally(()=>{if(cityWait===p)cityWait=null;});
+  cityWait=p;}
+function cityErr(m){$("err").textContent=m;$("err").classList.remove("hidden");}
+function cityRender(open=true){const raw=$("cityIn").value.trim(), q=norm(raw), ul=$("cityList");
+  const typed={label:`Use “${esc(raw)}”`,sub:"Use what you typed",val:"other",raw};
+  let items;
+  if(!gOff){ items=(gItems||[]).map(s=>({label:esc(s.main),sub:esc(s.secondary.replace(/,?\s*Philippines$/,"")),g:s}));
+    if(gItems&&!items.length&&raw)items.push(typed); }
+  else { let m=q?CITY_ALL.filter(x=>(x.c&&(norm(x.c).startsWith(q)||norm(x.c).includes(" "+q)))||norm(x.p).startsWith(q)).sort((a,b)=>((a.out?2:0)+(a.c&&norm(a.c).startsWith(q)?0:1))-((b.out?2:0)+(b.c&&norm(b.c).startsWith(q)?0:1))):[];
+    m=m.slice(0,6);
+    items=m.map(x=>({label:x.c||x.p,sub:x.out?(x.c?x.p:"Province"):x.p,val:x})).concat([raw&&!m.length?typed:{label:"Somewhere else",sub:"Type your location",val:"other",raw:""}]); }
+  cityHi=Math.min(cityHi,items.length-1);
+  ul.innerHTML=items.map((it,k)=>`<li role="option" id="co${k}" data-k="${k}" class="${k===cityHi?"hi":""}${it.val==="other"?" alt":""}">${it.label}<small>${it.sub}</small></li>`).join("")
+    +(items.some(it=>it.g)?`<li class="pg" aria-hidden="true">Powered by Google</li>`:"");
+  ul._items=items; ul.classList.toggle("hidden",!open||!items.length); $("cityIn").setAttribute("aria-expanded",!ul.classList.contains("hidden"));}
+function cityPick(it){
+  if(it.g){gPick(it.g);return;}
+  if(it.val==="other"){const r=it.raw||"";$("cityIn").value=r||"Somewhere else";$("area").value="other";$("city").value="";outProv="";$("elseIn").value=r;}
   else if(it.val.out){$("cityIn").value=it.val.c?`${it.val.c}, ${it.val.p}`:it.val.p;$("area").value="other";$("city").value=it.val.c;outProv=it.val.p;}
   else{$("cityIn").value=`${it.val.c}, ${it.val.p}`;$("area").value=it.val.p;$("city").value=it.val.c;outProv="";}
-  ul.classList.add("hidden");$("cityIn").setAttribute("aria-expanded","false");cityHi=-1;
-  $("outside").classList.toggle("hidden",$("area").value!=="other");$("elseWrap").classList.toggle("hidden",!(it==="other"||it.val==="other"));$("err").classList.add("hidden");}
-$("cityIn").addEventListener("focus",()=>{cityRender();$("cityList").classList.remove("hidden");});
-$("cityIn").addEventListener("input",()=>{$("err").classList.add("hidden");$("area").value="";$("city").value="";cityHi=0;cityRender();$("cityList").classList.remove("hidden");$("outside").classList.add("hidden");});
+  cityDone(it.val==="other");}
+function cityDone(typed){ // close the list and show what follows from the choice
+  $("cityList").classList.add("hidden");$("cityIn").setAttribute("aria-expanded","false");cityHi=-1;
+  $("outside").classList.toggle("hidden",$("area").value!=="other");$("elseWrap").classList.toggle("hidden",!typed);$("err").classList.add("hidden");}
+$("cityIn").addEventListener("focus",()=>cityRender());
+$("cityIn").addEventListener("input",()=>{$("err").classList.add("hidden");$("area").value="";$("city").value="";cityHi=0;gQuery();cityRender();$("outside").classList.add("hidden");});
 $("cityIn").addEventListener("keydown",e=>{const ul=$("cityList"),n=(ul._items||[]).length;if(!n)return;
-  if(e.key==="ArrowDown"){e.preventDefault();cityHi=(cityHi+1)%n;cityRender();ul.classList.remove("hidden");}
-  else if(e.key==="ArrowUp"){e.preventDefault();cityHi=(cityHi-1+n)%n;cityRender();ul.classList.remove("hidden");}
-  else if(e.key==="Enter"&&cityHi>-1){e.preventDefault();cityPick(ul._items[cityHi]);}
+  if(e.key==="ArrowDown"){e.preventDefault();cityHi=(cityHi+1)%n;cityRender();}
+  else if(e.key==="ArrowUp"){e.preventDefault();cityHi=(cityHi-1+n)%n;cityRender();}
+  else if(e.key==="Enter"&&cityHi>-1&&!ul.classList.contains("hidden")){e.preventDefault();cityPick(ul._items[cityHi]);}
   else if(e.key==="Escape"){ul.classList.add("hidden");}});
-$("cityList").addEventListener("mousedown",e=>{const li=e.target.closest("li");if(!li)return;e.preventDefault();cityPick($("cityList")._items[+li.dataset.k]);});
+$("cityList").addEventListener("mousedown",e=>{const li=e.target.closest("li[data-k]");if(!li)return;e.preventDefault();cityPick($("cityList")._items[+li.dataset.k]);});
 $("cityIn").addEventListener("blur",()=>setTimeout(()=>$("cityList").classList.add("hidden"),120));
 document.addEventListener("input",()=>{const er=$("err");if(!er.classList.contains("hidden"))er.classList.add("hidden");});
 /* edit bill on the estimate screen */
@@ -913,7 +968,8 @@ function show(s,push=true){
   if(s==="usage")$("appHome").appendChild($("appsWrap"));
   window.scrollTo(0,0);
 }
-$("next").onclick=()=>{
+$("next").onclick=async()=>{
+  if(cur==="area"&&cityWait)await cityWait; // a picked place is still being looked up
   const e=valid(cur);
   if(e){$("err").textContent=e;$("err").classList.remove("hidden");return;}
   if(cur==="wait"){finishWait();return;}
