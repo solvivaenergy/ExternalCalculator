@@ -85,6 +85,15 @@ returning `odoo_404`, re-read the UUID from the rule and set the secret again.
 `npx wrangler deploy` from `cloudflare-worker/`. The page needs no change. The
 page itself does not say which Odoo received a lead; use the health check below.
 
+The Worker sends the city in the form Odoo's lead qualification recognises
+(`odooCity` in the Worker): "Metro Manila ~ Makati" for Metro Manila, the
+province alone for the other provinces we install in ("Cavite", "Quezon
+Province"), and the page's "City, Province" unchanged for a place outside the
+service area. Odoo's "Installation City" is the customer's city and is checked
+against a fixed list the moment the lead is created; any other form is tagged
+"Area DQ" and parked. If that list changes in Odoo (auto-qualify action,
+`allowed_cities`), change `odooCity` with it.
+
 The lead's `packageType` is the package name as shown on the page: "Solar only",
 "Solar + battery" or "Bigger battery" (it was "starter" / "recommended"). The
 "API - Create lead - V5" action does not read `package_type` yet, so nothing in

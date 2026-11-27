@@ -193,6 +193,43 @@ async function handleEstimate(request, env) {
 // Var:     ODOO_TARGET in wrangler.toml selects which one is used.
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * The city as Odoo's lead qualification reads it.
+ *
+ * Odoo's "Installation City" is the customer's city, and the auto-qualify
+ * action checks it the moment the lead is created, against a fixed list:
+ * "Metro Manila ~ <City>" for Metro Manila, the province name alone for the
+ * other provinces we install in ("Quezon Province" for Quezon). Anything else
+ * is tagged "Area DQ" and the lead is parked. The page sends "City, Province",
+ * so a covered lead used to arrive as "Makati, Metro Manila" and was parked.
+ *
+ * - Metro Manila            → "Metro Manila ~ Makati"
+ * - another covered province → "Cavite" (the city is not kept: Odoo's list has
+ *   no "Province ~ City" entries outside Metro Manila; its own forms send the
+ *   province the same way)
+ * - outside the service area (the page sets continuedFromArea) → unchanged,
+ *   so Odoo files it as "Province ~ City" and tags it Area DQ, as it should.
+ */
+const ODOO_PROVINCES = {
+  cavite: "Cavite",
+  laguna: "Laguna",
+  batangas: "Batangas",
+  rizal: "Rizal",
+  bulacan: "Bulacan",
+  pampanga: "Pampanga",
+  quezon: "Quezon Province",
+};
+function odooCity(body) {
+  const raw = String(body.city ?? "").trim();
+  if (!raw || body.continuedFromArea || body.waitlistReason === "area") return raw;
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  if (parts.length < 2) return raw;
+  const city = parts[0];
+  const province = parts[parts.length - 1].toLowerCase();
+  if (province === "metro manila") return `Metro Manila ~ ${city}`;
+  return ODOO_PROVINCES[province] ?? raw;
+}
+
 /** "staging" or "production" — anything other than "staging" means production. */
 function odooTarget(env) {
   return String(env.ODOO_TARGET ?? "production").toLowerCase() === "staging"
@@ -267,7 +304,7 @@ async function handleSendEstimate(request, env, ctx) {
     phone: body.phone ?? "",
     email: body.email ?? "",
     monthly_bill: String(body.monthlyBill ?? ""),
-    city: body.city ?? "",
+    city: odooCity(body),
     type_of_home: body.propertyType ?? "",
     solar_timeline: body.installTimeline ?? "",
     own_home: body.homeOwnership ?? "",
