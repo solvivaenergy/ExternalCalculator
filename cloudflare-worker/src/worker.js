@@ -28,6 +28,16 @@
  *       field (/calculator/api/places/*). It is restricted in Google Cloud to
  *       the solvivaenergy.com referrer, which the Worker sends (PLACES_REFERER).
  *
+ *   wrangler secret put ESTIMATE_API_URL
+ *     → base URL of the Internal Calculator backend (InternalCalcBackEnd on
+ *       Render), no trailing slash. /calculator/api/estimate asks it for every
+ *       number the page shows, so the page prices exactly as the Internal
+ *       Calculator does.
+ *
+ *   wrangler secret put PUBLIC_ESTIMATE_KEY
+ *     → the same value as PUBLIC_ESTIMATE_KEY on that backend (its
+ *       POST /api/public/estimate routes refuse any other caller).
+ *
  * ── Odoo target ────────────────────────────────────────────────────────────
  *   ODOO_TARGET (plain var in wrangler.toml, "staging" or "production") picks
  *   which of the two webhook secrets /calculator/api/send-estimate posts to.
@@ -45,6 +55,7 @@ const CALC_PREFIX = "/calculator";
 const SEND_ESTIMATE_PATH = "/calculator/api/send-estimate";
 const HEALTH_PATH = "/calculator/api/health";
 const PLACES_PREFIX = "/calculator/api/places/";
+const ESTIMATE_PATH = "/calculator/api/estimate";
 const GOOGLE_PLACES = "https://places.googleapis.com/v1/places";
 // The Google key only accepts requests from this referrer.
 const PLACES_REFERER = "https://solvivaenergy.com/calculator";
@@ -87,6 +98,7 @@ export default {
           target: odooTarget(env),
           configured: Boolean(odooWebhookUrl(env)),
           places: Boolean(env.GOOGLE_PLACES_API_KEY),
+          estimate: Boolean(env.ESTIMATE_API_URL && env.PUBLIC_ESTIMATE_KEY),
         }),
         {
           headers: {
@@ -109,6 +121,15 @@ export default {
       );
     }
 
+    // ── API: the estimate's numbers, from the Internal Calculator's engine ──
+    // (signed-in visitors only)
+    if (url.pathname === ESTIMATE_PATH) {
+      if (!(await isAuthenticated(request, env))) {
+        return json({ ok: false, error: "unauthorized" }, 401);
+      }
+      return handleEstimate(request, env);
+    }
+
     // ── Auth check ────────────────────────────────────────────────────────
     if (!(await isAuthenticated(request, env))) {
       return renderLoginPage(false, url);
@@ -118,6 +139,53 @@ export default {
     return proxy(request, env);
   },
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Estimate numbers → the Internal Calculator backend
+//   POST /calculator/api/estimate  { common, scenarios: [{ id, … }] }
+//     → { ok, engineVersion, generatedAt, catalog, results: [{ id, estimate | error }] }
+// The page sends what the visitor answered and the systems it wants priced; the
+// backend runs @solviva/calc-engine on the Internal Calculator's live
+// parameters and answers customer-facing figures only (no costs). The key
+// stays here; the visitor's address goes along so the backend can rate-limit
+// per visitor instead of per Worker.
+// Secrets: ESTIMATE_API_URL, PUBLIC_ESTIMATE_KEY.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleEstimate(request, env) {
+  if (request.method !== "POST") {
+    return json({ ok: false, error: "method not allowed" }, 405);
+  }
+  const base = String(env.ESTIMATE_API_URL ?? "").replace(/\/+$/, "");
+  if (!base || !env.PUBLIC_ESTIMATE_KEY) {
+    return json({ ok: false, error: "not configured" }, 503);
+  }
+  const body = await request.text();
+  if (body.length > 20000) {
+    return json({ ok: false, error: "request too large" }, 413);
+  }
+  let res;
+  try {
+    res = await fetch(`${base}/api/public/estimate/batch`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-estimate-key": env.PUBLIC_ESTIMATE_KEY,
+        "x-estimate-client-ip": request.headers.get("CF-Connecting-IP") ?? "",
+      },
+      body,
+    });
+  } catch {
+    return json({ ok: false, error: "upstream_error" }, 502);
+  }
+  const data = await res.json().catch(() => null);
+  if (!res.ok || !data) {
+    // 400 = the page sent something the engine refused; 429 = too many requests
+    const status = res.status === 400 || res.status === 429 ? res.status : 502;
+    return json({ ok: false, error: data?.error ?? `backend_${res.status}` }, status);
+  }
+  return json({ ok: true, ...data });
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Send estimate → Odoo CRM webhook
