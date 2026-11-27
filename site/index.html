@@ -494,14 +494,15 @@ body.noscroll{overflow:hidden}
   .gauge{max-width:324px}
   .gauge .ray{stroke-width:5}
   .gauge .ray.tip{stroke-width:7}
-  .gauge .num{top:53.1%}
-  .gauge .bigrow{flex-direction:row;align-items:baseline;gap:9px}
-  .gauge .big{font-size:30px;line-height:35px;letter-spacing:0}
+  /* phone: the amount, "a month" under it, then the share of the bill on one line */
+  .gauge .num{top:50%}
+  .gauge .bigrow{flex-direction:column;align-items:center;gap:0}
+  .gauge .big{font-size:30px;line-height:32px;letter-spacing:0}
   .gauge .big .peso{font-size:1em}
-  .gauge .big[data-len="6"]{font-size:24px;letter-spacing:0}
-  .gauge .big[data-len="7"],.gauge .big[data-len="8"],.gauge .big[data-len="9"]{font-size:21px;letter-spacing:0}
-  .gauge .mo{margin:0;font-size:14px;line-height:20px}
-  .gauge .of{margin-top:4px;max-width:168px;font-size:12px;line-height:18px}
+  .gauge .big[data-len="6"]{font-size:30px;letter-spacing:0}
+  .gauge .big[data-len="7"],.gauge .big[data-len="8"],.gauge .big[data-len="9"]{font-size:25px;letter-spacing:0}
+  .gauge .mo{margin:-2px 0 0;font-size:14px;line-height:18px}
+  .gauge .of{margin-top:2px;max-width:none;font-size:12px;line-height:18px;white-space:nowrap}
   .sp{max-width:324px}
   .hero .right{margin-top:22px;padding:20px 0 0;border-left:0;border-top:1px solid var(--hair)}
   .fthead{gap:12px;padding:16px 18px}
